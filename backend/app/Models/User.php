@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+class User extends Authenticatable
+{
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name', // Keep mostly for backward compat or alias
+        'user_id',
+        'matric_number',
+        'surname',
+        'first_name',
+        'other_names',
+        'gender',
+        'dob',
+        'nationality',
+        'state_of_origin',
+        'lga',
+        'passport_photograph',
+        'email',
+        'phone_number',
+        'alternative_phone_number',
+        'residential_address',
+        'city',
+        'state_of_residence',
+        'username',
+        'role',
+        'account_status',
+        'last_login_date',
+        'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['name'];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'dob' => 'date',
+            'last_login_date' => 'datetime',
+        ];
+    }
+
+    /**
+     * Get the user's full name.
+     *
+     * @return string
+     */
+    public function getNameAttribute(): string
+    {
+        return trim(($this->first_name ?? '') . ' ' . ($this->surname ?? ''));
+    }
+
+    public function studentProfile()
+    {
+        return $this->hasOne(StudentProfile::class);
+    }
+
+    public function lecturerProfile()
+    {
+        return $this->hasOne(LecturerProfile::class);
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->role === 'student';
+    }
+
+    public function isLecturer(): bool
+    {
+        return $this->role === 'lecturer';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    // Friend Request Relationships
+    public function sentFriendRequests()
+    {
+        return $this->hasMany(FriendRequest::class, 'sender_id');
+    }
+
+    public function receivedFriendRequests()
+    {
+        return $this->hasMany(FriendRequest::class, 'receiver_id');
+    }
+
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
+            ->withTimestamps();
+    }
+
+    // Group Relationships
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_members')
+            ->withPivot('role', 'status')
+            ->withTimestamps();
+    }
+
+    public function createdGroups()
+    {
+        return $this->hasMany(Group::class, 'creator_id');
+    }
+
+    // Posts relationship for social features
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
