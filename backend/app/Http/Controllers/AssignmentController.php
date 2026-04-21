@@ -32,7 +32,23 @@ class AssignmentController extends Controller
             $query->where('course_id', $request->course_id);
         }
 
-        $assignments = $query->orderByDesc('created_at')->get();
+        if ($user->isStudent()) {
+            // Eager load submissions for the current student only
+            $query->with(['submissions' => function($q) use ($user) {
+                $q->where('student_id', $user->id);
+            }]);
+        }
+
+        $assignments = $query->orderByDesc('created_at')->paginate(20);
+
+        if ($user->isStudent()) {
+            $assignments->getCollection()->transform(function($assignment) {
+                $submission = $assignment->submissions->first(); // No extra query, already loaded
+                $assignment->status = $submission ? $submission->status : 'pending';
+                unset($assignment->submissions); // Clean up response
+                return $assignment;
+            });
+        }
 
         return response()->json($assignments);
     }

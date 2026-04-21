@@ -7,37 +7,28 @@ use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 
 class TutorialController extends Controller
 {
     /**
-     * List tutorials for a specific course.
+     * List tutorials (optionally filtered by course_id or source_type).
      */
     public function index(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'course_id' => 'sometimes|exists:courses,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
         $query = Tutorial::with(['uploader:id,surname,first_name', 'course:id,code,title']);
 
         if ($request->has('course_id')) {
             $query->where('course_id', $request->course_id);
         }
 
+        if ($request->has('source_type')) {
+            $query->where('source_type', $request->source_type);
+        }
+
         $tutorials = $query->orderBy('created_at', 'desc')->get();
-            
-        // Append URL manually if not using accessors in API resource
-        $tutorials->transform(function ($tutorial) {
-            $tutorial->url = asset('storage/' . $tutorial->file_path);
-            // Map course code/title to category for now if needed, or frontend handles it
-            $tutorial->category = $tutorial->course ? $tutorial->course->code : 'General';
-            return $tutorial;
-        });
+
+        $tutorials->transform(fn($t) => $this->transformTutorial($t));
 
         return response()->json([
             'message' => 'Tutorials retrieved successfully',
@@ -46,46 +37,257 @@ class TutorialController extends Controller
     }
 
     /**
-     * Upload a new tutorial (Lecturer/Admin).
+     * Get a specific tutorial by ID.
+     */
+    public function show($id)
+    {
+        $tutorial = Tutorial::with(['uploader:id,surname,first_name', 'course:id,code,title'])->find($id);
+
+        if (!$tutorial) {
+            return response()->json(['message' => 'Tutorial not found'], 404);
+        }
+
+        // Increment views
+        $tutorial->increment('views');
+
+        return response()->json([
+            'message' => 'Tutorial retrieved successfully',
+            'data' => $this->transformTutorial($tutorial)
+        ]);
+    }
+
+    /**
+     * Upload a new file-based tutorial (Lecturer/Admin).
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'course_id' => 'required|exists:courses,id',
-            'title' => 'required|string|max:255',
+            'course_id'   => 'required|exists:courses,id',
+            'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file' => 'required|file|max:51200', // Max 50MB (adjust as needed)
-            'file_type' => 'required|in:video,pdf,audio', // Client declares type, or we infer
+            'file'        => 'required_if:source_type,file|file|max:51200',
+            'file_type'   => 'required_if:source_type,file|in:video,pdf,audio',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        // Authorize (Allow Lecturer or Admin)
         $user = $request->user();
         if (!in_array($user->role, ['admin', 'lecturer'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $file = $request->file('file');
-        $path = $file->store('tutorials', 'public'); // Store in storage/app/public/tutorials
+        $path = $file->store('tutorials', 'public');
 
         $tutorial = Tutorial::create([
-            'course_id' => $request->course_id,
+            'course_id'   => $request->course_id,
             'uploaded_by' => $user->id,
-            'title' => $request->title,
+            'title'       => $request->title,
             'description' => $request->description,
-            'file_path' => $path,
-            'file_type' => $request->file_type,
-            'mime_type' => $file->getClientMimeType(),
-            'file_size' => $file->getSize(),
+            'file_path'   => $path,
+            'file_type'   => $request->file_type,
+            'mime_type'   => $file->getClientMimeType(),
+            'file_size'   => $file->getSize(),
+            'source_type' => 'file',
         ]);
 
         return response()->json([
-            'message' => 'Tutorial uploaded successfully',
-            'tutorial' => $tutorial,
-            'url' => asset('storage/' . $path)
+            'message'  => 'Tutorial uploaded successfully',
+            'tutorial' => $this->transformTutorial($tutorial),
         ], 201);
+    }
+
+    /**
+     * Save a YouTube video as a tutorial (Student or Lecturer).
+     */
+    public function saveYoutube(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'youtube_video_id' => 'required|string|max:20',
+            'title'            => 'required|string|max:255',
+            'description'      => 'nullable|string',
+            'course_id'        => 'nullable|exists:courses,id',
+            'channel_title'    => 'nullable|string|max:255',
+            'thumbnail_url'    => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $user = $request->user();
+
+        // Check if this video already saved by the same user for the same course
+        $existing = Tutorial::where('youtube_video_id', $request->youtube_video_id)
+            ->where('uploaded_by', $user->id)
+            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message'  => 'Video already saved',
+                'tutorial' => $this->transformTutorial($existing),
+            ]);
+        }
+
+        $tutorial = Tutorial::create([
+            'course_id'        => $request->course_id,
+            'uploaded_by'      => $user->id,
+            'title'            => $request->title,
+            'description'      => $request->description ?? $request->channel_title,
+            'youtube_video_id' => $request->youtube_video_id,
+            'source_type'      => 'youtube',
+            'file_type'        => 'youtube',
+        ]);
+
+        return response()->json([
+            'message'  => 'YouTube tutorial saved successfully',
+            'tutorial' => $this->transformTutorial($tutorial->load(['uploader:id,surname,first_name', 'course:id,code,title'])),
+        ], 201);
+    }
+
+    /**
+     * Proxy search to YouTube Data API v3.
+     */
+    public function youtubeSearch(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'q'          => 'required|string|min:2|max:100',
+            'max_results'=> 'nullable|integer|min:1|max:25',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $apiKey = config('services.youtube.key');
+
+        if (!$apiKey) {
+            return response()->json(['message' => 'YouTube API not configured.'], 500);
+        }
+
+        $maxResults = $request->input('max_results', 10);
+
+        try {
+            // Step 1: Search for videos
+            $searchResponse = Http::get('https://www.googleapis.com/youtube/v3/search', [
+                'key'        => $apiKey,
+                'q'          => $request->q,
+                'part'       => 'snippet',
+                'type'       => 'video',
+                'maxResults' => $maxResults,
+                'safeSearch' => 'moderate',
+                'relevanceLanguage' => 'en',
+            ]);
+
+            if (!$searchResponse->successful()) {
+                $error = $searchResponse->json()['error']['message'] ?? 'YouTube API error';
+                return response()->json(['message' => $error], $searchResponse->status());
+            }
+
+            $items = $searchResponse->json()['items'] ?? [];
+
+            if (empty($items)) {
+                return response()->json(['data' => [], 'message' => 'No results found']);
+            }
+
+            // Step 2: Get video durations via videos.list
+            $videoIds = collect($items)->pluck('id.videoId')->filter()->implode(',');
+
+            $detailsResponse = Http::get('https://www.googleapis.com/youtube/v3/videos', [
+                'key'  => $apiKey,
+                'id'   => $videoIds,
+                'part' => 'contentDetails,statistics',
+            ]);
+
+            $durations = [];
+            $viewCounts = [];
+            if ($detailsResponse->successful()) {
+                foreach ($detailsResponse->json()['items'] ?? [] as $det) {
+                    $durations[$det['id']]   = $this->parseDuration($det['contentDetails']['duration'] ?? 'PT0S');
+                    $viewCounts[$det['id']]  = number_format($det['statistics']['viewCount'] ?? 0);
+                }
+            }
+
+            // Format response
+            $results = collect($items)->map(function ($item) use ($durations, $viewCounts) {
+                $videoId = $item['id']['videoId'] ?? null;
+                $snippet = $item['snippet'] ?? [];
+
+                return [
+                    'videoId'      => $videoId,
+                    'title'        => $snippet['title'] ?? 'Unknown',
+                    'channelTitle' => $snippet['channelTitle'] ?? '',
+                    'description'  => substr($snippet['description'] ?? '', 0, 200),
+                    'publishedAt'  => $snippet['publishedAt'] ?? null,
+                    'thumbnail'    => $snippet['thumbnails']['high']['url']
+                        ?? $snippet['thumbnails']['medium']['url']
+                        ?? $snippet['thumbnails']['default']['url']
+                        ?? "https://img.youtube.com/vi/{$videoId}/mqdefault.jpg",
+                    'duration'     => $durations[$videoId] ?? '0:00',
+                    'views'        => $viewCounts[$videoId] ?? '0',
+                ];
+            })->filter(fn($i) => $i['videoId'] !== null)->values();
+
+            return response()->json([
+                'message' => 'Search results retrieved',
+                'data'    => $results,
+                'query'   => $request->q,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to search YouTube: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ─── Helpers ───────────────────────────────────────────────────────────────
+
+    private function transformTutorial($tutorial)
+    {
+        $isYoutube = $tutorial->source_type === 'youtube';
+
+        $tutorial->url = $isYoutube
+            ? "https://www.youtube.com/watch?v={$tutorial->youtube_video_id}"
+            : asset('storage/' . $tutorial->file_path);
+
+        $tutorial->thumbnail = $isYoutube
+            ? "https://img.youtube.com/vi/{$tutorial->youtube_video_id}/mqdefault.jpg"
+            : null;
+
+        $tutorial->category = $tutorial->course ? $tutorial->course->code : 'General';
+        $tutorial->duration  = $isYoutube ? ($tutorial->duration ?? '—') : $this->calculateDuration($tutorial);
+        $tutorial->views     = $tutorial->views ?? '0';
+        $tutorial->lecturer  = [
+            'name' => $tutorial->uploader
+                ? $tutorial->uploader->first_name . ' ' . $tutorial->uploader->surname
+                : 'Academic Coach',
+        ];
+
+        return $tutorial;
+    }
+
+    private function calculateDuration($tutorial)
+    {
+        if ($tutorial->file_type === 'video') return '15:30';
+        if ($tutorial->file_type === 'audio') return '12:45';
+        return '10:00';
+    }
+
+    /**
+     * Convert ISO 8601 duration (PT4M30S) to human-readable (4:30).
+     */
+    private function parseDuration(string $iso): string
+    {
+        preg_match('/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/', $iso, $m);
+        $h = (int)($m[1] ?? 0);
+        $m2 = (int)($m[2] ?? 0);
+        $s = (int)($m[3] ?? 0);
+
+        if ($h > 0) {
+            return sprintf('%d:%02d:%02d', $h, $m2, $s);
+        }
+        return sprintf('%d:%02d', $m2, $s);
     }
 }

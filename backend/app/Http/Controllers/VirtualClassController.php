@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\VirtualClass;
+use App\Models\VirtualClassMessage; // Add this line
 use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -28,7 +29,12 @@ class VirtualClassController extends Controller
             $query->whereIn('status', ['upcoming', 'active']);
         }
 
-        $classes = $query->orderBy('scheduled_at', 'asc')->get();
+        $classes = $query->orderBy('scheduled_at', 'asc')->paginate(20);
+
+        $classes->getCollection()->transform(function($class) {
+            $class->lecturer_name = $class->lecturer ? $class->lecturer->first_name . ' ' . $class->lecturer->surname : 'N/A';
+            return $class;
+        });
 
         return response()->json($classes);
     }
@@ -67,10 +73,45 @@ class VirtualClassController extends Controller
             'status' => 'upcoming',
         ]);
 
+        // Send notifications to all students enrolled in this course
+        $this->notifyStudentsAboutNewClass($virtualClass);
+
         return response()->json([
             'message' => 'Virtual class scheduled successfully',
             'virtual_class' => $virtualClass
         ], 201);
+    }
+
+    /**
+     * Send notifications to students about new virtual class
+     */
+    private function notifyStudentsAboutNewClass($virtualClass)
+    {
+        try {
+            // Get all students enrolled in this course
+            $enrolledStudents = \App\Models\CourseEnrollment::where('course_id', $virtualClass->course_id)
+                ->pluck('student_id');
+
+            // Create notifications for each student
+            foreach ($enrolledStudents as $studentId) {
+                \App\Models\Notification::create([
+                    'user_id' => $studentId,
+                    'type' => 'virtual_class',
+                    'title' => 'New Virtual Class Scheduled',
+                    'message' => "A new virtual class '{$virtualClass->title}' has been scheduled for " . 
+                                Carbon::parse($virtualClass->scheduled_at)->format('M d, Y \a\t h:i A'),
+                    'data' => json_encode([
+                        'virtual_class_id' => $virtualClass->id,
+                        'course_id' => $virtualClass->course_id,
+                        'scheduled_at' => $virtualClass->scheduled_at,
+                    ]),
+                    'is_read' => false,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the class creation
+            \Log::error('Failed to send virtual class notifications: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -100,18 +141,33 @@ class VirtualClassController extends Controller
         $virtualClass = VirtualClass::findOrFail($id);
         $user = $request->user();
 
-        // Register attendance
-        Attendance::firstOrCreate([
-            'virtual_class_id' => $virtualClass->id,
-            'user_id' => $user->id,
-        ], [
-            'joined_at' => now(),
-        ]);
+        // Check if class is active
+        if ($virtualClass->status !== 'active') {
+            return response()->json([
+                'message' => 'This class is not currently active'
+            ], 400);
+        }
+
+        // Register or update attendance
+        $attendance = Attendance::updateOrCreate(
+            [
+                'virtual_class_id' => $virtualClass->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'joined_at' => now(),
+                'status' => 'present',
+            ]
+        );
+
+        // Get total participants count
+        $participantsCount = Attendance::where('virtual_class_id', $virtualClass->id)->count();
 
         return response()->json([
             'message' => 'Joined class successfully',
             'meeting_link' => $virtualClass->meeting_link,
-            'virtual_class' => $virtualClass
+            'virtual_class' => $virtualClass,
+            'participants_count' => $participantsCount,
         ]);
     }
 
@@ -134,6 +190,138 @@ class VirtualClassController extends Controller
         return response()->json([
             'message' => 'Class has ended',
             'virtual_class' => $virtualClass
+        ]);
+    }
+
+    /**
+     * Mark attendance for a student
+     */
+    public function markAttendance(Request $request, $id)
+    {
+        $virtualClass = VirtualClass::findOrFail($id);
+        $user = $request->user();
+
+        // Register attendance
+        $attendance = Attendance::firstOrCreate([
+            'virtual_class_id' => $virtualClass->id,
+            'user_id' => $user->id,
+        ], [
+            'joined_at' => now(),
+            'status' => 'present',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Attendance marked successfully',
+            'data' => $attendance
+        ]);
+    }
+
+    /**
+     * Get specific virtual class details
+     */
+    public function show(Request $request, $id)
+    {
+        $virtualClass = VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
+            ->findOrFail($id);
+
+        $virtualClass->lecturer_name = $virtualClass->lecturer 
+            ? $virtualClass->lecturer->first_name . ' ' . $virtualClass->lecturer->surname 
+            : 'N/A';
+
+        return response()->json($virtualClass);
+    }
+    /**
+     * Get chat messages for a virtual class
+     */
+    public function getChat($id)
+    {
+        $messages = VirtualClassMessage::where('virtual_class_id', $id)
+            ->with('user:id,first_name,surname')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($msg) {
+                return [
+                    'id' => $msg->id,
+                    'user_name' => $msg->user->first_name . ' ' . $msg->user->surname,
+                    'message' => $msg->message,
+                    'timestamp' => $msg->created_at->format('H:i'),
+                    'is_lecturer' => $msg->is_lecturer,
+                ];
+            });
+
+        return response()->json(['messages' => $messages]);
+    }
+
+    /**
+     * Post a chat message
+     */
+    public function postChat(Request $request, $id)
+    {
+        $request->validate([
+            'message' => 'required|string',
+        ]);
+
+        $virtualClass = VirtualClass::findOrFail($id);
+        $user = $request->user();
+
+        $message = VirtualClassMessage::create([
+            'virtual_class_id' => $id,
+            'user_id' => $user->id,
+            'message' => $request->message,
+            'is_lecturer' => $user->role === 'lecturer',
+        ]);
+
+        return response()->json(['message' => 'Message sent', 'data' => $message]);
+    }
+
+    /**
+     * Toggle raise hand status
+     */
+    public function raiseHand(Request $request, $id)
+    {
+        $attendance = Attendance::where('virtual_class_id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $attendance->is_hand_raised = !$attendance->is_hand_raised;
+        $attendance->save();
+
+        return response()->json([
+            'message' => $attendance->is_hand_raised ? 'Hand raised' : 'Hand lowered',
+            'is_hand_raised' => $attendance->is_hand_raised
+        ]);
+    }
+
+    /**
+     * Get participants/attendees for a virtual class
+     */
+    public function getParticipants(Request $request, $id)
+    {
+        $virtualClass = VirtualClass::findOrFail($id);
+        
+        // Check authorization (lecturer or admin)
+        if ($request->user()->role !== 'lecturer' && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $participants = Attendance::where('virtual_class_id', $id)
+            ->with('user:id,first_name,surname,email')
+            ->get()
+            ->map(function($attendance) {
+                return [
+                    'id' => $attendance->user->id,
+                    'name' => $attendance->user->first_name . ' ' . $attendance->user->surname,
+                    'email' => $attendance->user->email,
+                    'joined_at' => $attendance->joined_at,
+                    'status' => $attendance->status ?? 'present',
+                    'is_hand_raised' => $attendance->is_hand_raised ?? false,
+                ];
+            });
+
+        return response()->json([
+            'total_participants' => $participants->count(),
+            'participants' => $participants
         ]);
     }
 }

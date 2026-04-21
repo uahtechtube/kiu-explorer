@@ -35,7 +35,8 @@ class LibraryResource extends Model
         'file_size' => 'integer',
     ];
 
-    protected $appends = ['full_file_url', 'full_cover_url'];
+    protected $appends = ['full_file_url', 'full_cover_url', 'downloads'];
+
 
     public function course()
     {
@@ -66,6 +67,11 @@ class LibraryResource extends Model
             return url('storage/' . $this->cover_image);
         }
         return null;
+    }
+
+    public function getDownloadsAttribute()
+    {
+        return $this->downloads_count ?? 0;
     }
 
     public function incrementDownloads()

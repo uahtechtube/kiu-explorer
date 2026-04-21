@@ -46,7 +46,7 @@ class EventController extends Controller
                 $event->is_registered = EventRegistration::where('event_id', $event->id)
                     ->where('user_id', $request->user()->id)
                     ->exists();
-                $event->attendees_count = EventRegistration::where('event_id', $event->id)->count();
+                $event->participants_count = EventRegistration::where('event_id', $event->id)->count();
             });
         }
 
@@ -102,23 +102,36 @@ class EventController extends Controller
             ], 422);
         }
 
-        $data = $request->all();
-        $data['created_by'] = $request->user()->id;
-        $data['status'] = 'upcoming';
+        try {
+            $data = $request->all();
+            $data['created_by'] = $request->user()->id;
+            $data['status'] = 'upcoming';
 
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('events', 'public');
-            $data['image_url'] = Storage::url($path);
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('events', 'public');
+                $data['image_url'] = Storage::url($path);
+            }
+
+            // Ensure association_id is null if empty
+            if (empty($data['association_id'])) {
+                $data['association_id'] = null;
+            }
+
+            $event = Event::create($data);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Event created successfully',
+                'data' => $event
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create event',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $event = Event::create($data);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Event created successfully',
-            'data' => $event
-        ], 201);
     }
 
     /**

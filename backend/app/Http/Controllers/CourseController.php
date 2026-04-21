@@ -27,7 +27,33 @@ class CourseController extends Controller
             $query->where('semester', $request->semester);
         }
 
-        $courses = $query->with('department')->get();
+        // Search functionality
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        $courses = $query->with('department.faculty')
+            ->withCount(['lecturers as allocations_count', 'students as registrations_count'])
+            ->get();
+
+        // Add additional data and formatting
+        $courses->each(function ($course) use ($request) {
+            // Aliases for frontend compatibility
+            $course->course_code = $course->code;
+            $course->credit_hours = $course->unit;
+
+            // Add registration status for authenticated student
+            if ($request->user() && $request->user()->role === 'student') {
+                $course->is_registered = CourseRegistration::where('course_id', $course->id)
+                    ->where('user_id', $request->user()->id)
+                    ->exists();
+            }
+        });
+
         return response()->json($courses);
     }
 
@@ -59,15 +85,12 @@ class CourseController extends Controller
     }
 
     /**
-     * Enroll a student in courses.
+     * Enroll a student in a single course.
      */
     public function enroll(Request $request)
     {
-        // Expects an array of course_ids
         $validator = Validator::make($request->all(), [
-            'course_ids' => 'required|array',
-            'course_ids.*' => 'exists:courses,id',
-            'academic_session_id' => 'required|exists:academic_sessions,id',
+            'course_id' => 'required|exists:courses,id',
         ]);
 
         if ($validator->fails()) {
@@ -79,27 +102,50 @@ class CourseController extends Controller
             return response()->json(['message' => 'Only students can enroll in courses.'], 403);
         }
 
-        DB::beginTransaction();
-        try {
-            $registrations = [];
-            foreach ($request->course_ids as $courseId) {
-                $registrations[] = CourseRegistration::firstOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'course_id' => $courseId,
-                        'academic_session_id' => $request->academic_session_id,
-                    ],
-                    ['status' => 'registered']
-                );
-            }
-            DB::commit();
-            return response()->json([
-                'message' => 'Courses registered successfully',
-                'registrations' => $registrations
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Enrollment failed.'], 500);
+        // Get current academic session
+        $currentSession = \App\Models\AcademicSession::where('is_current', true)->first();
+        if (!$currentSession) {
+            return response()->json(['message' => 'No active academic session found.'], 400);
         }
+
+        // Check if already registered
+        $existing = CourseRegistration::where('user_id', $user->id)
+            ->where('course_id', $request->course_id)
+            ->where('academic_session_id', $currentSession->id)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['message' => 'Already registered for this course.'], 400);
+        }
+
+        $registration = CourseRegistration::create([
+            'user_id' => $user->id,
+            'course_id' => $request->course_id,
+            'academic_session_id' => $currentSession->id,
+            'status' => 'registered'
+        ]);
+
+        return response()->json([
+            'message' => 'Course registered successfully',
+            'registration' => $registration
+        ]);
+    }
+
+    /**
+     * Get student's registered courses
+     */
+    public function myRegistrations(Request $request)
+    {
+        $user = $request->user();
+        
+        $registrations = CourseRegistration::where('user_id', $user->id)
+            ->with('course.department')
+            ->get();
+
+        $courses = $registrations->map(function($reg) {
+            return $reg->course;
+        });
+
+        return response()->json($courses);
     }
 }

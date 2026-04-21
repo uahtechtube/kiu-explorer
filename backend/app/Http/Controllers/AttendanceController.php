@@ -66,9 +66,31 @@ class AttendanceController extends Controller
             $query->where('attendance_date', '<=', $request->to_date);
         }
 
-        $attendance = $query->orderByDesc('attendance_date')->get();
+        $records = $query->orderByDesc('attendance_date')->get()->map(function($record) {
+            return [
+                'id' => $record->id,
+                'course_code' => 'GEN-101', // This should ideally come from a relationship, mocking for now as GeneralAttendance doesn't have course_id in current view
+                'course_title' => 'General Attendance',
+                'date' => $record->attendance_date->format('Y-m-d'),
+                'status' => ucfirst($record->status),
+                'time' => $record->check_in_time ?? '-',
+            ];
+        });
 
-        return response()->json($attendance);
+        // Mock summary for now as the model structure is simple
+        $summary = [
+            [
+                'course_code' => 'OVERALL',
+                'total_classes' => $records->count(),
+                'attended' => $records->where('status', 'Present')->count(),
+                'percentage' => $records->count() > 0 ? round(($records->where('status', 'Present')->count() / $records->count()) * 100) : 0
+            ]
+        ];
+
+        return response()->json([
+            'records' => $records,
+            'summary' => $summary
+        ]);
     }
 
     /**

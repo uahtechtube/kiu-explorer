@@ -194,20 +194,40 @@ class ExamController extends Controller
             'responses' => 'required|array',
             'responses.*.question_id' => 'required|exists:questions,id',
             'responses.*.selected_option_id' => 'nullable|exists:options,id',
-            'responses.*.theory_answer' => 'nullable|string',
+            'responses.*.answer_text' => 'nullable|string', // For fill in the blank
         ]);
 
-        DB::transaction(function () use ($request, $attempt) {
-            $totalScore = 0;
+        $feedback = [];
+        $totalScore = 0;
 
+        DB::transaction(function () use ($request, $attempt, &$totalScore, &$feedback) {
             foreach ($request->responses as $resp) {
-                $question = Question::find($resp['question_id']);
+                $question = Question::with('options')->find($resp['question_id']);
                 $marks = 0;
+                $isCorrect = false;
+                $correctAnswer = null;
 
-                if ($question->type === 'objective' && isset($resp['selected_option_id'])) {
-                    $option = Option::find($resp['selected_option_id']);
-                    if ($option->is_correct) {
-                        $marks = $question->marks;
+                if ($question->type === 'objective' || $question->type === 'true_false') {
+                    $correctOption = $question->options->where('is_correct', true)->first();
+                    $correctAnswer = $correctOption ? $correctOption->option_text : null;
+                    
+                    if (isset($resp['selected_option_id'])) {
+                        $option = Option::find($resp['selected_option_id']);
+                        if ($option && $option->is_correct) {
+                            $marks = $question->marks;
+                            $isCorrect = true;
+                        }
+                    }
+                } elseif ($question->type === 'fill_in_blank') {
+                    // Simple case-insensitive match for fill in the blank
+                    $correctOption = $question->options->where('is_correct', true)->first();
+                    $correctAnswer = $correctOption ? $correctOption->option_text : null;
+                    
+                    if (isset($resp['answer_text']) && $correctAnswer) {
+                        if (strtolower(trim($resp['answer_text'])) === strtolower(trim($correctAnswer))) {
+                            $marks = $question->marks;
+                            $isCorrect = true;
+                        }
                     }
                 }
 
@@ -215,11 +235,22 @@ class ExamController extends Controller
                     'exam_attempt_id' => $attempt->id,
                     'question_id' => $resp['question_id'],
                     'selected_option_id' => $resp['selected_option_id'] ?? null,
-                    'theory_answer' => $resp['theory_answer'] ?? null,
-                    'marks_obtained' => ($question->type === 'objective') ? $marks : null,
+                    'theory_answer' => $resp['answer_text'] ?? null,
+                    'marks_obtained' => $marks,
                 ]);
 
                 $totalScore += $marks;
+                
+                $feedback[] = [
+                    'question_id' => $question->id,
+                    'question_text' => $question->question_text,
+                    'is_correct' => $isCorrect,
+                    'marks_obtained' => $marks,
+                    'total_marks' => $question->marks,
+                    'correct_answer' => $correctAnswer,
+                    'selected_answer' => $question->type === 'fill_in_blank' ? ($resp['answer_text'] ?? 'N/A') : 
+                                        (isset($resp['selected_option_id']) ? Option::find($resp['selected_option_id'])->option_text : 'N/A')
+                ];
             }
 
             $attempt->update([
@@ -231,7 +262,73 @@ class ExamController extends Controller
 
         return response()->json([
             'message' => 'Exam submitted successfully',
-            'score' => $attempt->score
+            'score' => $totalScore,
+            'total_possible' => $attempt->exam->total_marks,
+            'feedback' => $feedback
         ]);
     }
+
+    /**
+     * Force submit an exam (for auto-submission when timer ends)
+     */
+    public function forceSubmit(Request $request, $attemptId)
+    {
+        return $this->submitAttempt($request, $attemptId);
+    }
+
+    /**
+     * Get results for a specific attempt.
+     */
+    public function getAttemptResults(Request $request, $id)
+    {
+        $attempt = ExamAttempt::with(['exam.course', 'responses.question.options'])
+            ->where('id', $id)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $questions = $attempt->responses->map(function($resp) {
+            $question = $resp->question;
+            $correctOption = $question->options->where('is_correct', true)->first();
+            
+            return [
+                'id' => $question->id,
+                'question_number' => $question->question_number ?? 0,
+                'question_text' => $question->question_text,
+                'type' => $question->type,
+                'marks' => $question->marks,
+                'obtained_marks' => $resp->marks_obtained,
+                'user_answer' => $question->type === 'objective' ? 
+                                ($question->options->find($resp->selected_option_id)->option_text ?? 'N/A') : 
+                                ($resp->theory_answer ?? 'N/A'),
+                'correct_answer' => $correctOption ? $correctOption->option_text : null,
+                'is_correct' => $resp->marks_obtained >= $question->marks && $question->marks > 0,
+            ];
+        });
+
+        return response()->json([
+            'id' => $attempt->id,
+            'title' => $attempt->exam->title,
+            'course_code' => $attempt->exam->course->code ?? 'N/A',
+            'total_marks' => $attempt->exam->total_marks,
+            'obtained_marks' => $attempt->score,
+            'percentage' => ($attempt->exam->total_marks > 0) ? ($attempt->score / $attempt->exam->total_marks) * 100 : 0,
+            'grade' => $this->calculateGrade(($attempt->exam->total_marks > 0) ? ($attempt->score / $attempt->exam->total_marks) * 100 : 0),
+            'status' => $attempt->score >= $attempt->exam->passing_marks ? 'pass' : 'fail',
+            'submitted_at' => $attempt->submitted_at,
+            'time_taken' => $attempt->started_at->diffInMinutes($attempt->submitted_at),
+            'questions' => $questions
+        ]);
+    }
+
+    private function calculateGrade($percentage)
+    {
+        if ($percentage >= 70) return 'A';
+        if ($percentage >= 60) return 'B';
+        if ($percentage >= 50) return 'C';
+        if ($percentage >= 45) return 'D';
+        if ($percentage >= 40) return 'E';
+        return 'F';
+    }
 }
+
+

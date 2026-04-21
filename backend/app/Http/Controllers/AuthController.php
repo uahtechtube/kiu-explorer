@@ -103,9 +103,17 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid login details'], 401);
         }
 
-        $user = User::where('email', $request['email'])
-            ->with(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme'])
-            ->firstOrFail();
+        // Fetch user and load role-specific relationships
+        $user = User::where('email', $request['email'])->first();
+        
+        // Load relationships based on role
+        if ($user->role === 'student') {
+            $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);
+        } elseif ($user->role === 'lecturer') {
+            $user->load(['lecturerProfile']);
+        }
+        // Admin doesn't need additional profile relationships
+        
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -152,8 +160,12 @@ class AuthController extends Controller
 
             DB::commit();
             
-            // Reload user with all relationships
-            $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);
+            // Reload user with role-specific relationships
+            if ($user->role === 'student') {
+                $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);
+            } elseif ($user->role === 'lecturer') {
+                $user->load(['lecturerProfile']);
+            }
             
             return response()->json([
                 'message' => 'Profile updated successfully',
@@ -191,7 +203,13 @@ class AuthController extends Controller
             $imagePath = $this->uploadBase64Image($request->image, 'profile-photos');
             
             $user->update(['passport_photograph' => $imagePath]);
-            $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);
+            
+            // Reload user with role-specific relationships
+            if ($user->role === 'student') {
+                $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);
+            } elseif ($user->role === 'lecturer') {
+                $user->load(['lecturerProfile']);
+            }
 
             return response()->json([
                 'message' => 'Profile image updated successfully',
@@ -234,6 +252,6 @@ class AuthController extends Controller
         
         \Storage::disk('public')->put($path, $imageData);
         
-        return asset('storage/' . $path);
+        return 'storage/' . $path;
     }
 }

@@ -39,6 +39,11 @@ class Course extends Model
                     ->withTimestamps();
     }
 
+    public function registrations()
+    {
+        return $this->hasMany(CourseRegistration::class);
+    }
+
     public function quizzes()
     {
         return $this->hasMany(Quiz::class);

@@ -32,8 +32,8 @@ class ReportController extends Controller
             ->join('exams', 'exam_attempts.exam_id', '=', 'exams.id')
             ->join('courses', 'exams.course_id', '=', 'courses.id')
             ->where('exam_attempts.student_id', $studentId)
-            ->select('courses.course_code', 'courses.course_title', DB::raw('AVG(score) as average_score'))
-            ->groupBy('courses.course_code', 'courses.course_title')
+            ->select('courses.code', 'courses.title', DB::raw('AVG(score) as average_score'))
+            ->groupBy('courses.code', 'courses.title')
             ->get();
 
         return response()->json([
@@ -90,10 +90,10 @@ class ReportController extends Controller
         $totalPosts = Post::count();
         $activeUsersToday = DB::table('sessions')->count(); // Assuming using database session driver
 
-        $popularCourses = DB::table('registrations')
-            ->join('courses', 'registrations.course_id', '=', 'courses.id')
-            ->select('courses.course_code', DB::raw('count(*) as student_count'))
-            ->groupBy('courses.course_code')
+        $popularCourses = DB::table('course_registrations')
+            ->join('courses', 'course_registrations.course_id', '=', 'courses.id')
+            ->select('courses.code', DB::raw('count(*) as student_count'))
+            ->groupBy('courses.code')
             ->orderByDesc('student_count')
             ->limit(5)
             ->get();

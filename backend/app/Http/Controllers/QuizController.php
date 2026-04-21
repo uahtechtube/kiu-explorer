@@ -23,7 +23,7 @@ class QuizController extends Controller
             $query->where('created_by', $user->id);
         }
 
-        return response()->json($query->get());
+        return response()->json(['data' => $query->get()]);
     }
 
     public function store(Request $request)

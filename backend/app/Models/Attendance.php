@@ -14,6 +14,8 @@ class Attendance extends Model
         'user_id',
         'joined_at',
         'left_at',
+        'status',
+        'is_hand_raised',
     ];
 
     protected $casts = [

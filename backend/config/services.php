@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'version' => env('GEMINI_API_VERSION', 'v1'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash-latest'),
+    ],
+
+    'youtube' => [
+        'key' => env('YOUTUBE_API_KEY'),
+    ],
+
 ];

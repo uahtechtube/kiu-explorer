@@ -146,4 +146,86 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class);
     }
+
+    // Role-Based Permissions
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    /**
+     * Check if user has a specific role
+     */
+    public function hasRole($role)
+    {
+        if (is_string($role)) {
+            return $this->roles()->where('slug', $role)->exists();
+        }
+
+        return $this->roles()->where('id', $role->id)->exists();
+    }
+
+    /**
+     * Check if user has any of the given roles
+     */
+    public function hasAnyRole(array $roles)
+    {
+        return $this->roles()->whereIn('slug', $roles)->exists();
+    }
+
+    /**
+     * Check if user has a specific permission
+     */
+    public function hasPermission($permission)
+    {
+        return $this->roles()
+            ->whereHas('permissions', function ($query) use ($permission) {
+                $query->where('slug', $permission);
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user has any of the given permissions
+     */
+    public function hasAnyPermission(array $permissions)
+    {
+        return $this->roles()
+            ->whereHas('permissions', function ($query) use ($permissions) {
+                $query->whereIn('slug', $permissions);
+            })
+            ->exists();
+    }
+
+    /**
+     * Assign a role to the user
+     */
+    public function assignRole($role)
+    {
+        if (is_string($role)) {
+            $role = Role::where('slug', $role)->firstOrFail();
+        }
+
+        $this->roles()->syncWithoutDetaching($role);
+    }
+
+    /**
+     * Remove a role from the user
+     */
+    public function removeRole($role)
+    {
+        if (is_string($role)) {
+            $role = Role::where('slug', $role)->firstOrFail();
+        }
+
+        $this->roles()->detach($role);
+    }
+
+    /**
+     * Sync user roles
+     */
+    public function syncRoles(array $roles)
+    {
+        $this->roles()->sync($roles);
+    }
 }

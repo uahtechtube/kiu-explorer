@@ -47,7 +47,7 @@ class SearchController extends Controller
         // Search Events
         $events = Event::where('title', 'LIKE', "%{$query}%")
             -&gt;orWhere('description', 'LIKE', "%{$query}%")
-            -&gt;where('start_date', '&gt;=', now())
+            ->where('start_time', '>=', now())
             -&gt;limit(5)
             -&gt;get();
 
@@ -56,7 +56,7 @@ class SearchController extends Controller
                 'id' =&gt; $event-&gt;id,
                 'type' =&gt; 'Event',
                 'title' =&gt; $event-&gt;title,
-                'subtitle' =&gt; $event-&gt;start_date-&gt;format('M d') . ' • ' . $event-&gt;location . ' • ' . $event-&gt;start_date-&gt;format('g:i A'),
+                'subtitle' => $event->start_time->format('M d') . ' • ' . $event->venue . ' • ' . $event->start_time->format('g:i A'),
                 'link' =&gt; '/events/' . $event-&gt;id
             ];
         }
