@@ -62,11 +62,13 @@ class TutorialController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'course_id'   => 'required|exists:courses,id',
+            'course_id'   => 'nullable|exists:courses,id',
+            'course_code' => 'nullable|string|exists:courses,code',
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
-            'file'        => 'required_if:source_type,file|file|max:51200',
-            'file_type'   => 'required_if:source_type,file|in:video,pdf,audio',
+            'file'        => 'nullable|file|max:51200',
+            'video_url'   => 'nullable|url',
+            'file_type'   => 'nullable|in:video,pdf,audio',
         ]);
 
         if ($validator->fails()) {
@@ -78,20 +80,35 @@ class TutorialController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        $file = $request->file('file');
-        $path = $file->store('tutorials', 'public');
+        $courseId = $request->course_id;
+        if (!$courseId && $request->course_code) {
+            $course = Course::where('code', $request->course_code)->first();
+            if ($course) $courseId = $course->id;
+        }
 
-        $tutorial = Tutorial::create([
-            'course_id'   => $request->course_id,
+        $data = [
+            'course_id'   => $courseId,
             'uploaded_by' => $user->id,
             'title'       => $request->title,
             'description' => $request->description,
-            'file_path'   => $path,
-            'file_type'   => $request->file_type,
-            'mime_type'   => $file->getClientMimeType(),
-            'file_size'   => $file->getSize(),
-            'source_type' => 'file',
-        ]);
+        ];
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $data['file_path'] = $file->store('tutorials', 'public');
+            $data['file_type'] = $request->file_type ?? 'video';
+            $data['mime_type'] = $file->getClientMimeType();
+            $data['file_size'] = $file->getSize();
+            $data['source_type'] = 'file';
+        } elseif ($request->video_url) {
+            $data['file_path'] = $request->video_url;
+            $data['file_type'] = 'video';
+            $data['source_type'] = 'link';
+        } else {
+            return response()->json(['message' => 'No file or video URL provided.'], 422);
+        }
+
+        $tutorial = Tutorial::create($data);
 
         return response()->json([
             'message'  => 'Tutorial uploaded successfully',
@@ -109,6 +126,7 @@ class TutorialController extends Controller
             'title'            => 'required|string|max:255',
             'description'      => 'nullable|string',
             'course_id'        => 'nullable|exists:courses,id',
+            'course_code'      => 'nullable|string|exists:courses,code',
             'channel_title'    => 'nullable|string|max:255',
             'thumbnail_url'    => 'nullable|string|max:500',
         ]);
@@ -119,10 +137,16 @@ class TutorialController extends Controller
 
         $user = $request->user();
 
+        $courseId = $request->course_id;
+        if (!$courseId && $request->course_code) {
+            $course = Course::where('code', $request->course_code)->first();
+            if ($course) $courseId = $course->id;
+        }
+
         // Check if this video already saved by the same user for the same course
         $existing = Tutorial::where('youtube_video_id', $request->youtube_video_id)
             ->where('uploaded_by', $user->id)
-            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
+            ->when($courseId, fn($q) => $q->where('course_id', $courseId))
             ->first();
 
         if ($existing) {
@@ -133,7 +157,7 @@ class TutorialController extends Controller
         }
 
         $tutorial = Tutorial::create([
-            'course_id'        => $request->course_id,
+            'course_id'        => $courseId,
             'uploaded_by'      => $user->id,
             'title'            => $request->title,
             'description'      => $request->description ?? $request->channel_title,

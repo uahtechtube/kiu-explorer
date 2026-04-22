@@ -19,7 +19,14 @@ class BookingController extends Controller
         ]);
 
         $user = $request->user();
-        $room = HostelRoom::findOrFail($request->hostel_room_id);
+        $room = HostelRoom::with('hostel')->findOrFail($request->hostel_room_id);
+
+        if ($room->hostel->gender_type !== 'mixed' && strtolower($room->hostel->gender_type) !== strtolower($user->gender)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This hostel is restricted to ' . ucfirst($room->hostel->gender_type) . ' students.'
+            ], 400);
+        }
 
         if ($room->available_slots <= 0) {
             return response()->json([

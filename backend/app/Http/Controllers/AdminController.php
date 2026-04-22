@@ -174,8 +174,8 @@ class AdminController extends Controller
     {
         // This is a simplified version. In production, you'd use a proper logging system
         $logs = DB::table('users')
-            ->select('id', 'surname', 'first_name', 'email', 'last_login_at', 'created_at')
-            ->latest('last_login_at')
+            ->select('id', 'surname', 'first_name', 'email', 'created_at as time_ref')
+            ->latest('created_at')
             ->limit(50)
             ->get()
             ->map(function ($user) {
@@ -183,7 +183,7 @@ class AdminController extends Controller
                     'user' => $user->surname . ' ' . $user->first_name,
                     'email' => $user->email,
                     'action' => 'Login',
-                    'timestamp' => $user->last_login_at ?? $user->created_at,
+                    'timestamp' => $user->time_ref,
                     'ip_address' => '---', // You'd track this in a real system
                 ];
             });
@@ -259,7 +259,7 @@ class AdminController extends Controller
     {
         // Simple implementation - users active in last 15 minutes
         // You'd use a proper session tracking system in production
-        return User::where('last_login_at', '>=', now()->subMinutes(15))->count();
+        return User::where('updated_at', '>=', now()->subMinutes(15))->count();
     }
 
     private function getDirectorySize($path)
@@ -310,9 +310,9 @@ class AdminController extends Controller
         // Engagement metrics
         $today = now()->startOfDay();
         $engagementMetrics = [
-            'daily_active_users' => User::where('last_login_at', '>=', $today)->count(),
+            'daily_active_users' => User::where('updated_at', '>=', $today)->count(),
             'avg_session_duration' => 45, // This would come from session tracking
-            'total_logins_today' => User::where('last_login_at', '>=', $today)->count(),
+            'total_logins_today' => User::where('updated_at', '>=', $today)->count(),
         ];
 
         return response()->json([
@@ -361,6 +361,83 @@ class AdminController extends Controller
             'message' => 'Lecturer created successfully',
             'user' => $user->load('lecturerProfile')
         ], 201);
+    }
+
+    /**
+     * Create a new user (Admin use only)
+     */
+    public function createUser(Request $request)
+    {
+        $request->validate([
+            'surname' => 'required|string',
+            'first_name' => 'required|string',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
+            'role' => 'required|in:student,lecturer,admin',
+        ]);
+
+        $user = User::create([
+            'surname' => $request->surname,
+            'first_name' => $request->first_name,
+            'email' => $request->email,
+            'password' => bcrypt($request->password),
+            'role' => $request->role,
+            'account_status' => 'active',
+        ]);
+
+        if ($request->role === 'student') {
+            // Give them a mock matric number or let it be null initially
+            $user->update(['matric_number' => 'KIU/'.date('Y').'/STU/'.rand(1000, 9999)]);
+        } elseif ($request->role === 'lecturer') {
+            $user->lecturerProfile()->create([
+                'department_id' => $request->department_id ?? 1, // Fallback
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'User created successfully',
+            'user' => $user
+        ], 201);
+    }
+
+    /**
+     * Update an existing user
+     */
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        
+        $request->validate([
+            'first_name' => 'sometimes|string',
+            'surname' => 'sometimes|string',
+            'email' => 'sometimes|email|unique:users,email,'.$id,
+            'password' => 'nullable|min:6',
+            'role' => 'sometimes|in:student,lecturer,admin',
+        ]);
+
+        if ($request->has('first_name')) $user->first_name = $request->first_name;
+        if ($request->has('surname')) $user->surname = $request->surname;
+        if ($request->has('email')) $user->email = $request->email;
+        if ($request->filled('password')) $user->password = bcrypt($request->password);
+        if ($request->has('role')) $user->role = $request->role;
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'User updated successfully',
+            'user' => $user
+        ]);
+    }
+
+    /**
+     * Delete a user
+     */
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return response()->json(['message' => 'User deleted successfully']);
     }
 
     /**
@@ -449,9 +526,9 @@ class AdminController extends Controller
         $thisWeek = now()->startOfWeek();
         $thisMonth = now()->startOfMonth();
         
-        fputcsv($file, ['Daily Active Users', User::where('last_login_at', '>=', $today)->count()]);
-        fputcsv($file, ['Weekly Active Users', User::where('last_login_at', '>=', $thisWeek)->count()]);
-        fputcsv($file, ['Monthly Active Users', User::where('last_login_at', '>=', $thisMonth)->count()]);
+        fputcsv($file, ['Daily Active Users', User::where('updated_at', '>=', $today)->count()]);
+        fputcsv($file, ['Weekly Active Users', User::where('updated_at', '>=', $thisWeek)->count()]);
+        fputcsv($file, ['Monthly Active Users', User::where('updated_at', '>=', $thisMonth)->count()]);
         fputcsv($file, ['Total Users', User::count()]);
         fputcsv($file, ['Total Courses', Course::count()]);
         fputcsv($file, ['Total Exams', Exam::count()]);

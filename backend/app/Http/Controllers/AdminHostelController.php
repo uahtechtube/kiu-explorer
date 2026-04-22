@@ -136,16 +136,25 @@ class AdminHostelController extends Controller
         }
 
         $room = $booking->room;
-        if ($room->available_slots <= 0) {
+        // Find an available bed in this room
+        $bed = $room->beds()->where('is_occupied', false)->first();
+
+        if ($room->available_slots <= 0 || !$bed) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'No available slots remaining in this room.',
+                'message' => 'No available beds remaining in this room.',
             ], 400);
         }
 
         $booking->update([
             'status'      => 'approved',
             'approved_at' => now(),
+        ]);
+
+        // Assign the bed
+        $bed->update([
+            'is_occupied' => true,
+            'student_id'  => $booking->student_id,
         ]);
 
         $room->decrement('available_slots');
@@ -200,6 +209,14 @@ class AdminHostelController extends Controller
             'status'             => 'available',
             'amenities'          => $request->amenities ?? [],
         ]);
+
+        // Auto-generate beds for tracking
+        for ($i = 1; $i <= $request->capacity; $i++) {
+            $room->beds()->create([
+                'bed_number'  => "Bed $i",
+                'is_occupied' => false,
+            ]);
+        }
 
         return response()->json([
             'status'  => 'success',

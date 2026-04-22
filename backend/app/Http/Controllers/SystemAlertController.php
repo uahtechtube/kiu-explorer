@@ -8,16 +8,6 @@ use Illuminate\Http\Request;
 
 class SystemAlertController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(function ($request, $next) {
-            if ($request->user() && $request->user()->role !== 'admin') {
-                return response()->json(['message' => 'Unauthorized.'], 403);
-            }
-            return $next($request);
-        });
-    }
-
     /**
      * Get all system alerts
      */

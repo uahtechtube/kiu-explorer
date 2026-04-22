@@ -303,6 +303,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Exams (alias)
         Route::post('/exams', [\App\Http\Controllers\ExamController::class, 'store']);
         
+        // Announcements
+        Route::post('/announcements', [\App\Http\Controllers\AnnouncementController::class, 'store']);
+
+        
         // Virtual Classes Management
         Route::get('/virtual-classes', [\App\Http\Controllers\VirtualClassController::class, 'index']);
         Route::post('/virtual-classes', [\App\Http\Controllers\VirtualClassController::class, 'store']);
@@ -329,6 +333,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         
         // User Management
         Route::get('/users', [\App\Http\Controllers\AdminController::class, 'users']);
+        Route::post('/users', [\App\Http\Controllers\AdminController::class, 'createUser']);
+        Route::put('/users/{id}', [\App\Http\Controllers\AdminController::class, 'updateUser']);
+        Route::delete('/users/{id}', [\App\Http\Controllers\AdminController::class, 'deleteUser']);
         Route::patch('/users/{id}/status', [\App\Http\Controllers\AdminController::class, 'updateUserStatus']);
         
         // Course Registrations
@@ -409,6 +416,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/bookings', [\App\Http\Controllers\AdminHostelController::class, 'bookings']);
             Route::post('/bookings/{id}/approve', [\App\Http\Controllers\AdminHostelController::class, 'approveBooking']);
             Route::post('/bookings/{id}/reject', [\App\Http\Controllers\AdminHostelController::class, 'rejectBooking']);
+            Route::post('/bookings/{id}/evict', [\App\Http\Controllers\AdminHostelController::class, 'evictStudent']);
 
             // Room Management
             Route::get('/{hostelId}/rooms', [\App\Http\Controllers\AdminHostelController::class, 'roomsByHostel']);
@@ -418,6 +426,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
             // Admin Complaints management
             Route::get('/complaints', [\App\Http\Controllers\AdminHostelController::class, 'allComplaints']);
             Route::patch('/complaints/{id}', [\App\Http\Controllers\AdminHostelController::class, 'updateComplaintStatus']);
+        });
+
+        // Admin Finance / Payments
+        Route::prefix('finance')->group(function () {
+            Route::get('/payments', [\App\Http\Controllers\AdminPaymentController::class, 'index']);
+            Route::post('/payments/{reference}/verify', [\App\Http\Controllers\AdminPaymentController::class, 'verifyPayment']);
         });
     });
 

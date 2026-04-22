@@ -106,6 +106,13 @@ class AuthController extends Controller
         // Fetch user and load role-specific relationships
         $user = User::where('email', $request['email'])->first();
         
+        // Prevent banned/blocked users from logging in
+        if (in_array($user->account_status, ['blocked', 'suspended'])) {
+            return response()->json([
+                'message' => 'Your account has been suspended or blocked by administration. Please contact support.'
+            ], 403);
+        }
+        
         // Load relationships based on role
         if ($user->role === 'student') {
             $user->load(['studentProfile.faculty', 'studentProfile.department', 'studentProfile.programme']);

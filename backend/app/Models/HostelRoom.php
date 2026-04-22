@@ -32,4 +32,9 @@ class HostelRoom extends Model
     {
         return $this->hasMany(HostelBooking::class);
     }
+
+    public function beds()
+    {
+        return $this->hasMany(HostelBed::class, 'hostel_room_id');
+    }
 }

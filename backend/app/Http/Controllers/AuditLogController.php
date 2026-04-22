@@ -8,16 +8,6 @@ use Illuminate\Support\Facades\Response;
 
 class AuditLogController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware(function ($request, $next) {
-            if ($request->user() && $request->user()->role !== 'admin') {
-                return response()->json(['message' => 'Unauthorized.'], 403);
-            }
-            return $next($request);
-        });
-    }
-
     /**
      * Get all audit logs with filters
      */
