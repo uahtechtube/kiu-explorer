@@ -27,13 +27,8 @@ class StudentDashboardController extends Controller
             // 1. Current Session
             $currentSession = AcademicSession::where('is_current', true)->first();
 
-            // 2. Enrolled Courses Count
-            $enrolledCount = 0;
-            if ($currentSession) {
-                $enrolledCount = CourseRegistration::where('user_id', $user->id)
-                    ->where('academic_session_id', $currentSession->id)
-                    ->count();
-            }
+            // 2. Available Courses Count (Instead of Enrolled)
+            $availableCount = \App\Models\Course::count();
 
             // 3. Upcoming Virtual Classes (Real data)
             $upcomingClasses = \App\Models\VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
@@ -72,12 +67,31 @@ class StudentDashboardController extends Controller
                 });
 
             // 5. Dynamic Stats
-            // For now, these are still semi-placeholders but could be calculated
-            // Total Tutorials (based on library resources for enrolled courses)
             $totalTutorials = \App\Models\LibraryResource::count();
             
-            // Attendance Rate - simplified to prevent timeout
-            $rate = 85; // Default placeholder - will be calculated properly later
+            // Attendance Rate - Calculated from all Live Classes (since no enrollment)
+            $totalClasses = \App\Models\VirtualClass::count();
+            
+            $attendedClasses = \App\Models\Attendance::where('user_id', $user->id)->count();
+            $rate = $totalClasses > 0 ? round(($attendedClasses / $totalClasses) * 100) : 0;
+
+            // 6. Latest Library Resources
+            $latestResources = \App\Models\LibraryResource::where('is_approved', true)
+                ->where('is_public', true)
+                ->orderByDesc('created_at')
+                ->limit(3)
+                ->get()
+                ->map(function ($res) {
+                    return [
+                        'id' => $res->id,
+                        'title' => $res->title,
+                        'author' => $res->author,
+                        'category' => $res->category,
+                        'course_code' => $res->course_code,
+                        'file_type' => strtoupper($res->file_type),
+                        'file_size' => round($res->file_size / 1024 / 1024, 2) . ' MB'
+                    ];
+                });
 
             return response()->json([
                 'student' => [
@@ -92,14 +106,15 @@ class StudentDashboardController extends Controller
                 ],
                 'session' => $currentSession?->name ?? 'N/A',
                 'overview' => [
-                    'enrolled_courses' => $enrolledCount,
-                    'cgpa' => '4.25', // Should be calculated from ExamAttempts in future
+                    'enrolled_courses' => $availableCount,
+                    'cgpa' => '4.25', 
                     'attendance' => $rate . '%',
                     'total_tutorials' => $totalTutorials,
                     'total_classes' => $upcomingClasses->count(),
                 ],
                 'upcoming_classes' => $upcomingClasses,
                 'announcements' => $announcements,
+                'latest_resources' => $latestResources,
             ]);
         } catch (\Exception $e) {
             // Self-Healing: If table is missing, create it and retry

@@ -15,9 +15,13 @@ class LibraryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = LibraryResource::with(['course', 'uploader:id,surname,first_name'])
-            ->where('is_approved', true)
-            ->where('is_public', true);
+        $query = LibraryResource::with(['course', 'uploader:id,surname,first_name']);
+
+        // If not requesting own content, filter by approved and public
+        if (!$request->has('my_content') && !$request->has('uploaded_by')) {
+            $query->where('is_approved', true)
+                  ->where('is_public', true);
+        }
 
         if ($request->has('category')) {
             $query->where('category', $request->category);
@@ -25,6 +29,18 @@ class LibraryController extends Controller
 
         if ($request->has('course_id')) {
             $query->where('course_id', $request->course_id);
+        }
+
+        if ($request->has('course_code')) {
+            $query->where('course_code', 'like', "%{$request->course_code}%");
+        }
+
+        if ($request->has('uploaded_by')) {
+            $query->where('uploaded_by', $request->uploaded_by);
+        }
+
+        if ($request->has('my_content') && $request->user()) {
+            $query->where('uploaded_by', $request->user()->id);
         }
 
         if ($request->has('search')) {
@@ -78,6 +94,7 @@ class LibraryController extends Controller
         $data['file_path'] = $path;
         $data['file_type'] = $file->getClientOriginalExtension();
         $data['file_size'] = $file->getSize();
+        $data['course_code'] = $request->course_code;
         $data['uploaded_by'] = $request->user()->id;
         $data['is_approved'] = $request->user()->isAdmin(); // Auto-approve for admin
 
@@ -138,11 +155,68 @@ class LibraryController extends Controller
     }
 
     /**
+     * Update resource
+     */
+    public function update(Request $request, $id)
+    {
+        $resource = LibraryResource::findOrFail($id);
+
+        // Check ownership
+        if ($request->user()->id !== $resource->uploaded_by && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'author' => 'nullable|string|max:255',
+            'category' => 'required|in:textbook,journal,past_question,reference,research,other',
+            'description' => 'nullable|string',
+            'course_code' => 'nullable|string|max:20',
+            'is_public' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $resource->update($request->all());
+
+        return response()->json([
+            'message' => 'Resource updated successfully.',
+            'data' => $resource
+        ]);
+    }
+
+    /**
+     * Toggle public status (Ban/Unban equivalent)
+     */
+    public function toggleStatus($id)
+    {
+        $resource = LibraryResource::findOrFail($id);
+
+        if (request()->user()->id !== $resource->uploaded_by && !request()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $resource->update(['is_approved' => !$resource->is_approved]);
+
+        return response()->json([
+            'message' => 'Resource status toggled.',
+            'is_approved' => $resource->is_approved
+        ]);
+    }
+
+    /**
      * Delete resource
      */
     public function destroy($id)
     {
         $resource = LibraryResource::findOrFail($id);
+
+        // Check ownership
+        if (request()->user()->id !== $resource->uploaded_by && !request()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
 
         // Delete files
         if ($resource->file_path) {

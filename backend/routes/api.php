@@ -53,6 +53,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Lecturer route alias for tutorial upload
     Route::post('/lecturer/tutorials', [\App\Http\Controllers\TutorialController::class, 'store']);
+    Route::put('/lecturer/tutorials/{id}', [\App\Http\Controllers\TutorialController::class, 'update']);
+    Route::delete('/lecturer/tutorials/{id}', [\App\Http\Controllers\TutorialController::class, 'destroy']);
+    Route::patch('/lecturer/tutorials/{id}/ban', [\App\Http\Controllers\TutorialController::class, 'ban']);
     Route::post('/lecturer/tutorials/youtube/save', [\App\Http\Controllers\TutorialController::class, 'saveYoutube']);
 
     // Virtual Classes & E-Classroom
@@ -68,10 +71,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // E-Exams & Assessment
     Route::get('/exams', [\App\Http\Controllers\ExamController::class, 'index']);
     Route::post('/exams', [\App\Http\Controllers\ExamController::class, 'store']);
+    Route::get('/lecturer/exams', [\App\Http\Controllers\ExamController::class, 'lecturerExams']);
+    Route::put('/lecturer/exams/{id}', [\App\Http\Controllers\ExamController::class, 'update']);
+    Route::delete('/lecturer/exams/{id}', [\App\Http\Controllers\ExamController::class, 'destroy']);
     Route::post('/exams/{id}/questions', [\App\Http\Controllers\ExamController::class, 'addQuestions']);
     Route::post('/exams/{id}/start', [\App\Http\Controllers\ExamController::class, 'startAttempt']);
     Route::post('/exams/attempts/{id}/submit', [\App\Http\Controllers\ExamController::class, 'submitAttempt']);
     Route::post('/exams/attempts/{id}/force-submit', [\App\Http\Controllers\ExamController::class, 'forceSubmit']);
+    Route::get('/exams/attempts/{id}/results', [\App\Http\Controllers\ExamController::class, 'getAttemptResults']);
 
     // Settings
     Route::get('/settings', [\App\Http\Controllers\SettingsController::class, 'getSettings']);
@@ -149,7 +156,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/courses/register', [\App\Http\Controllers\CourseController::class, 'enroll']);
         Route::get('/courses/my-registrations', [\App\Http\Controllers\CourseController::class, 'myRegistrations']);
         
-        Route::get('/exams/results/{id}', [\App\Http\Controllers\ExamController::class, 'getAttemptResults']);
         
         // Payments
         Route::get('/payments', [\App\Http\Controllers\PaymentController::class, 'index']);
@@ -201,8 +207,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Digital Library (Consolidated)
     Route::get('/library', [\App\Http\Controllers\LibraryController::class, 'index']);
     Route::get('/library/{id}', [\App\Http\Controllers\LibraryController::class, 'show']);
-    Route::get('/library/{id}/download', [\App\Http\Controllers\LibraryController::class, 'download']);
     Route::post('/library', [\App\Http\Controllers\LibraryController::class, 'store']); // Lecturer/Admin
+    Route::put('/library/{id}', [\App\Http\Controllers\LibraryController::class, 'update']); // Lecturer/Admin
+    Route::patch('/library/{id}/status', [\App\Http\Controllers\LibraryController::class, 'toggleStatus']); // Lecturer/Admin
     Route::post('/library/{id}/approve', [\App\Http\Controllers\LibraryController::class, 'approve']); // Admin
     Route::delete('/library/{id}', [\App\Http\Controllers\LibraryController::class, 'destroy']); // Admin
 
@@ -361,6 +368,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/bulk-reject', [\App\Http\Controllers\ModerationController::class, 'bulkReject']);
             Route::post('/bulk-delete', [\App\Http\Controllers\ModerationController::class, 'bulkDelete']);
         });
+
+        // Admin Tutorials
+        Route::prefix('tutorials')->group(function () {
+            Route::get('/', [\App\Http\Controllers\TutorialController::class, 'adminIndex']);
+            Route::put('/{id}', [\App\Http\Controllers\TutorialController::class, 'updateAsAdmin']);
+            Route::delete('/{id}', [\App\Http\Controllers\TutorialController::class, 'destroyAsAdmin']);
+            Route::post('/{id}/ban', [\App\Http\Controllers\TutorialController::class, 'ban']);
+        });
         
         // System Monitoring
         Route::prefix('system')->group(function () {
@@ -444,3 +459,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 // Public Payment Webhook (outside auth middleware)
 Route::post('/payments/webhook', [\App\Http\Controllers\PaymentController::class, 'webhook']);
+
+// Public Library Download (Protected by is_approved/is_public check in controller)
+Route::get('/library/{id}/download', [\App\Http\Controllers\LibraryController::class, 'download']);

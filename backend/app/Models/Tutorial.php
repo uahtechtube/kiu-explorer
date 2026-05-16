@@ -11,6 +11,7 @@ class Tutorial extends Model
 
     protected $fillable = [
         'course_id',
+        'course_code',
         'uploaded_by',
         'title',
         'description',
@@ -21,7 +22,13 @@ class Tutorial extends Model
         'youtube_video_id',
         'source_type',
         'views',
+        'status',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
 
     public function course()
     {

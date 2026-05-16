@@ -19,6 +19,7 @@ class LibraryResource extends Model
         'file_size',
         'cover_image',
         'course_id',
+        'course_code',
         'uploaded_by',
         'downloads_count',
         'is_public',

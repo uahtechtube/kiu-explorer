@@ -108,6 +108,7 @@ class AdminHostelController extends Controller
         $bookings = HostelBooking::with([
             'student:id,surname,first_name,matric_number',
             'room.hostel',
+            'room.beds',
             'payment',
         ])->latest()->get();
 
@@ -182,7 +183,7 @@ class AdminHostelController extends Controller
     public function roomsByHostel($hostelId)
     {
         $hostel = Hostel::findOrFail($hostelId);
-        $rooms  = $hostel->rooms()->withCount('bookings')->get();
+        $rooms  = $hostel->rooms()->with(['beds.student:id,surname,first_name,matric_number'])->withCount('bookings')->get();
 
         return response()->json([
             'status' => 'success',
@@ -267,7 +268,7 @@ class AdminHostelController extends Controller
     public function updateComplaintStatus($id, Request $request)
     {
         $request->validate([
-            'status'        => 'required|in:pending,in_progress,resolved,closed',
+            'status'        => 'required|in:pending,assigned,in_progress,resolved,closed',
             'admin_comment' => 'nullable|string',
         ]);
 

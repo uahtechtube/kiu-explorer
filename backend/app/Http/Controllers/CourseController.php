@@ -46,12 +46,8 @@ class CourseController extends Controller
             $course->course_code = $course->code;
             $course->credit_hours = $course->unit;
 
-            // Add registration status for authenticated student
-            if ($request->user() && $request->user()->role === 'student') {
-                $course->is_registered = CourseRegistration::where('course_id', $course->id)
-                    ->where('user_id', $request->user()->id)
-                    ->exists();
-            }
+            // Course registration is now global - everyone is "registered"
+            $course->is_registered = true;
         });
 
         return response()->json($courses);
@@ -85,67 +81,22 @@ class CourseController extends Controller
     }
 
     /**
-     * Enroll a student in a single course.
+     * Enroll a student (Legacy/Mock).
      */
     public function enroll(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'course_id' => 'required|exists:courses,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $user = $request->user();
-        if ($user->role !== 'student') {
-            return response()->json(['message' => 'Only students can enroll in courses.'], 403);
-        }
-
-        // Get current academic session
-        $currentSession = \App\Models\AcademicSession::where('is_current', true)->first();
-        if (!$currentSession) {
-            return response()->json(['message' => 'No active academic session found.'], 400);
-        }
-
-        // Check if already registered
-        $existing = CourseRegistration::where('user_id', $user->id)
-            ->where('course_id', $request->course_id)
-            ->where('academic_session_id', $currentSession->id)
-            ->first();
-
-        if ($existing) {
-            return response()->json(['message' => 'Already registered for this course.'], 400);
-        }
-
-        $registration = CourseRegistration::create([
-            'user_id' => $user->id,
-            'course_id' => $request->course_id,
-            'academic_session_id' => $currentSession->id,
-            'status' => 'registered'
-        ]);
-
+        // Registration is now disabled/global
         return response()->json([
-            'message' => 'Course registered successfully',
-            'registration' => $registration
+            'message' => 'Course access is now global. No registration needed.',
         ]);
     }
 
     /**
-     * Get student's registered courses
+     * Get student's registered courses (Now returns all courses)
      */
     public function myRegistrations(Request $request)
     {
-        $user = $request->user();
-        
-        $registrations = CourseRegistration::where('user_id', $user->id)
-            ->with('course.department')
-            ->get();
-
-        $courses = $registrations->map(function($reg) {
-            return $reg->course;
-        });
-
+        $courses = Course::with('department.faculty')->get();
         return response()->json($courses);
     }
 }

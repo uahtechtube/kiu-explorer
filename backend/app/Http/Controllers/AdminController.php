@@ -34,7 +34,6 @@ class AdminController extends Controller
             'academic' => [
                 'courses' => Course::count(),
                 'exams' => Exam::count(),
-                'pending_registrations' => CourseRegistration::where('status', 'registered')->count(),
             ],
             'social' => [
                 'associations' => Association::count(),
@@ -95,11 +94,7 @@ class AdminController extends Controller
      */
     public function pendingRegistrations()
     {
-        $registrations = CourseRegistration::with(['user:id,surname,first_name,matric_number', 'course:id,title,code'])
-            ->where('status', 'registered')
-            ->get();
-
-        return response()->json($registrations);
+        return response()->json([]);
     }
 
     /**
@@ -107,18 +102,7 @@ class AdminController extends Controller
      */
     public function approveRegistration(Request $request, $id)
     {
-        $registration = CourseRegistration::findOrFail($id);
-        
-        $request->validate([
-            'status' => 'required|in:approved,dropped'
-        ]);
-
-        $registration->update(['status' => $request->status]);
-
-        return response()->json([
-            'message' => "Registration status updated to {$request->status}",
-            'registration' => $registration
-        ]);
+        return response()->json(['message' => "Registration system disabled."]);
     }
 
     /**
@@ -128,7 +112,6 @@ class AdminController extends Controller
     {
         return response()->json([
             'recent_users' => User::latest()->limit(5)->get(),
-            'recent_registrations' => CourseRegistration::with(['user', 'course'])->latest()->limit(5)->get(),
             'active_virtual_classes' => VirtualClass::where('status', 'scheduled')->with('lecturer')->get(),
         ]);
     }
@@ -295,18 +278,6 @@ class AdminController extends Controller
             ];
         }
 
-        // Top enrolled courses
-        $courseEnrollment = Course::withCount('registrations')
-            ->orderBy('registrations_count', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function ($course) {
-                return [
-                    'course' => $course->code . ': ' . $course->title,
-                    'students' => $course->registrations_count
-                ];
-            });
-
         // Engagement metrics
         $today = now()->startOfDay();
         $engagementMetrics = [
@@ -317,7 +288,6 @@ class AdminController extends Controller
 
         return response()->json([
             'user_growth' => $userGrowth,
-            'course_enrollment' => $courseEnrollment,
             'engagement_metrics' => $engagementMetrics,
             'summary' => [
                 'total_users' => User::count(),
@@ -466,10 +436,6 @@ class AdminController extends Controller
                 $this->exportUsersData($file);
             }
 
-            if ($type === 'courses' || $type === 'all') {
-                $this->exportCoursesData($file);
-            }
-
             if ($type === 'engagement' || $type === 'all') {
                 $this->exportEngagementData($file);
             }
@@ -492,26 +458,6 @@ class AdminController extends Controller
             $count = User::where('role', $role)->count();
             $percentage = $total > 0 ? round(($count / $total) * 100, 2) : 0;
             fputcsv($file, [ucfirst($role), $count, $percentage . '%']);
-        }
-        
-        fputcsv($file, []); // Empty line
-    }
-
-    private function exportCoursesData($file)
-    {
-        fputcsv($file, ['COURSE ENROLLMENT']);
-        fputcsv($file, ['Course Code', 'Course Title', 'Students Enrolled']);
-        
-        $courses = Course::withCount('registrations')
-            ->orderBy('registrations_count', 'desc')
-            ->get();
-        
-        foreach ($courses as $course) {
-            fputcsv($file, [
-                $course->code,
-                $course->title,
-                $course->registrations_count
-            ]);
         }
         
         fputcsv($file, []); // Empty line
