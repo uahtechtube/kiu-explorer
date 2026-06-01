@@ -14,6 +14,7 @@ class AssociationMember extends Model
         'user_id',
         'role',
         'joined_at',
+        'status',
     ];
 
     public function association()

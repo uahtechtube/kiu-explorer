@@ -18,7 +18,8 @@ class HostelController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $query->get()
+            'data' => $query->get(),
+            'hostel_service_fee' => (float) cache()->get('settings.hostel_service_fee', 5000.00),
         ]);
     }
 
@@ -30,7 +31,8 @@ class HostelController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => $hostel
+            'data' => $hostel,
+            'hostel_service_fee' => (float) cache()->get('settings.hostel_service_fee', 5000.00),
         ]);
     }
 

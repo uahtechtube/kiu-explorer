@@ -20,6 +20,7 @@ class VirtualClass extends Model
         'recording_url',
         'is_recorded',
         'status',
+        'is_chat_muted',
     ];
 
     protected $casts = [

@@ -27,4 +27,9 @@ class Hostel extends Model
     {
         return $this->hasMany(HostelRoom::class);
     }
+
+    public function rules()
+    {
+        return $this->hasMany(HostelRule::class);
+    }
 }

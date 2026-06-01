@@ -70,6 +70,7 @@ class ExamController extends Controller
 
             $exam->status = $status;
             $exam->course_code = $exam->course_code ?: ($exam->course->code ?? 'N/A');
+            $exam->scheduled_at = $exam->start_time ? $exam->start_time->toDateTimeString() : null;
             return $exam;
         });
             
@@ -574,6 +575,73 @@ class ExamController extends Controller
         if ($percentage >= 45) return 'D';
         if ($percentage >= 40) return 'E';
         return 'F';
+    }
+
+    /**
+     * Get submitted attempts that need manual marking for an exam.
+     */
+    public function getAttemptsToMark(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+
+        if ($exam->uploaded_by !== $request->user()->id && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $attempts = ExamAttempt::where('exam_id', $examId)
+            ->where('status', 'submitted')
+            ->with(['user:id,surname,first_name,matric_number', 'responses.question'])
+            ->get()
+            ->map(function ($attempt) {
+                // Filter to responses that are theory questions
+                $attempt->theory_responses = $attempt->responses->filter(function ($resp) {
+                    return $resp->question && $resp->question->type === 'theory';
+                })->values();
+                return $attempt;
+            });
+
+        return response()->json($attempts);
+    }
+
+    /**
+     * Grade a specific student attempt response.
+     */
+    public function gradeTheoryAttempt(Request $request, $attemptId)
+    {
+        $request->validate([
+            'grades' => 'required|array',
+            'grades.*.question_id' => 'required|exists:questions,id',
+            'grades.*.marks_obtained' => 'required|integer|min:0',
+        ]);
+
+        $attempt = ExamAttempt::with('exam')->findOrFail($attemptId);
+
+        if ($attempt->exam->uploaded_by !== $request->user()->id && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        DB::transaction(function () use ($request, $attempt) {
+            foreach ($request->grades as $gradeData) {
+                $question = Question::findOrFail($gradeData['question_id']);
+                $marksAwarded = min($gradeData['marks_obtained'], $question->marks);
+
+                ExamResponse::where('exam_attempt_id', $attempt->id)
+                    ->where('question_id', $gradeData['question_id'])
+                    ->update([
+                        'marks_obtained' => $marksAwarded
+                    ]);
+            }
+
+            $totalScore = ExamResponse::where('exam_attempt_id', $attempt->id)->sum('marks_obtained');
+            $attempt->update([
+                'score' => $totalScore
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Theory attempt graded successfully.',
+            'score' => $attempt->fresh()->score
+        ]);
     }
 }
 

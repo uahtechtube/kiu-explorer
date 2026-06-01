@@ -37,9 +37,11 @@ class AssociationController extends Controller
         // Add membership status for authenticated user
         if ($request->user()) {
             $associations->each(function($association) use ($request) {
-                $association->is_member = AssociationMember::where('association_id', $association->id)
+                $membership = AssociationMember::where('association_id', $association->id)
                     ->where('user_id', $request->user()->id)
-                    ->exists();
+                    ->first();
+                $association->is_member = $membership !== null && $membership->status === 'approved';
+                $association->membership_status = $membership ? $membership->status : null;
             });
         }
 
@@ -54,7 +56,7 @@ class AssociationController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $association = Association::with(['members.user', 'events'])
+        $association = Association::with(['members.user', 'events', 'documents'])
             ->withCount('members')
             ->findOrFail($id);
 
@@ -63,7 +65,8 @@ class AssociationController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->first();
 
-            $association->is_member = $membership !== null;
+            $association->is_member = $membership !== null && $membership->status === 'approved';
+            $association->membership_status = $membership ? $membership->status : null;
             $association->member_role = $membership ? $membership->role : null;
         }
 
@@ -74,15 +77,15 @@ class AssociationController extends Controller
     }
 
     /**
-     * Create new association (Admin only)
+     * Create new association
      */
     public function store(Request $request)
     {
-        // Authorization check
-        if ($request->user()->role !== 'admin') {
+        // Authorization check - allow both admin and student
+        if ($request->user()->role !== 'admin' && $request->user()->role !== 'student') {
             return response()->json([
                 'success' => false,
-                'message' => 'Only administrators can create associations'
+                'message' => 'Only administrators and students can create associations'
             ], 403);
         }
 
@@ -107,6 +110,11 @@ class AssociationController extends Controller
         $data = $request->all();
         $data['status'] = 'active';
 
+        // Auto-assign student creator as president
+        if ($request->user()->role === 'student' && empty($data['president_id'])) {
+            $data['president_id'] = $request->user()->id;
+        }
+
         // Handle logo upload
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('associations/logos', 'public');
@@ -121,15 +129,15 @@ class AssociationController extends Controller
 
         $association = Association::create($data);
 
-        // Add president as member if specified
-        if ($request->president_id) {
-            AssociationMember::create([
-                'association_id' => $association->id,
-                'user_id' => $request->president_id,
-                'role' => 'president',
-                'status' => 'active'
-            ]);
-        }
+        // Add president as approved member if specified
+        $presidentId = $association->president_id ?: $request->user()->id;
+        AssociationMember::create([
+            'association_id' => $association->id,
+            'user_id' => $presidentId,
+            'role' => 'president',
+            'status' => 'approved', // Automatically approved president membership
+            'joined_at' => now()
+        ]);
 
         return response()->json([
             'success' => true,
@@ -208,18 +216,23 @@ class AssociationController extends Controller
     }
 
     /**
-     * Delete association (Admin only)
+     * Delete association (Admin or President)
      */
     public function destroy(Request $request, $id)
     {
-        if ($request->user()->role !== 'admin') {
+        $association = Association::findOrFail($id);
+
+        // Authorization check - only admin or president
+        $membership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$membership || $membership->role !== 'president')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only administrators can delete associations'
+                'message' => 'Unauthorized to delete this association. Only system administrators or the association president can disband it.'
             ], 403);
         }
-
-        $association = Association::findOrFail($id);
 
         // Delete images
         if ($association->logo_url) {
@@ -240,13 +253,13 @@ class AssociationController extends Controller
     }
 
     /**
-     * Join association
+     * Join association (Pending approval)
      */
     public function join(Request $request, $id)
     {
         $association = Association::findOrFail($id);
 
-        // Check if already a member
+        // Check if already a member or pending request
         $existing = AssociationMember::where('association_id', $association->id)
             ->where('user_id', $request->user()->id)
             ->first();
@@ -254,7 +267,7 @@ class AssociationController extends Controller
         if ($existing) {
             return response()->json([
                 'success' => false,
-                'message' => 'Already a member of this association'
+                'message' => 'Already requested or joined this association (Status: ' . ucfirst($existing->status) . ')'
             ], 400);
         }
 
@@ -262,13 +275,110 @@ class AssociationController extends Controller
             'association_id' => $association->id,
             'user_id' => $request->user()->id,
             'role' => 'member',
-            'status' => 'active'
+            'status' => 'pending', // Awaiting approval
+            'joined_at' => now()
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Successfully joined association',
+            'message' => 'Membership request submitted successfully. Awaiting approval.',
             'data' => $membership
+        ]);
+    }
+
+    /**
+     * Get pending join requests (for executives / admin)
+     */
+    public function pendingRequests(Request $request, $id)
+    {
+        $association = Association::findOrFail($id);
+
+        // Check if user is executive
+        $membership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$membership || !in_array($membership->role, ['president', 'vice_president', 'secretary']))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only executives or administrators can view join requests'
+            ], 403);
+        }
+
+        $requests = AssociationMember::with('user')
+            ->where('association_id', $association->id)
+            ->where('status', 'pending')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $requests
+        ]);
+    }
+
+    /**
+     * Approve join request
+     */
+    public function approveRequest(Request $request, $associationId, $userId)
+    {
+        $association = Association::findOrFail($associationId);
+
+        // Check if logged-in user is executive
+        $execMembership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$execMembership || !in_array($execMembership->role, ['president', 'vice_president', 'secretary']))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only executives or administrators can approve requests'
+            ], 403);
+        }
+
+        $member = AssociationMember::where('association_id', $associationId)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        $member->update([
+            'status' => 'approved',
+            'joined_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Join request approved successfully',
+            'data' => $member
+        ]);
+    }
+
+    /**
+     * Reject/Remove join request
+     */
+    public function rejectRequest(Request $request, $associationId, $userId)
+    {
+        $association = Association::findOrFail($associationId);
+
+        // Check if logged-in user is executive
+        $execMembership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$execMembership || !in_array($execMembership->role, ['president', 'vice_president', 'secretary']))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only executives or administrators can reject requests'
+            ], 403);
+        }
+
+        $member = AssociationMember::where('association_id', $associationId)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        $member->delete(); // Delete the pending request completely
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Join request rejected and removed'
         ]);
     }
 
@@ -311,23 +421,25 @@ class AssociationController extends Controller
     {
         $memberships = AssociationMember::with('association')
             ->where('user_id', $request->user()->id)
-            ->where('status', 'active')
+            ->where('status', 'approved')
             ->get();
 
         $associations = $memberships->map(function($membership) {
             $assoc = $membership->association;
-            $assoc->member_role = $membership->role;
+            if ($assoc) {
+                $assoc->member_role = $membership->role;
+            }
             return $assoc;
-        });
+        })->filter();
 
         return response()->json([
             'success' => true,
-            'data' => $associations
+            'data' => $associations->values()
         ]);
     }
 
     /**
-     * Get association members (for executives)
+     * Get association members (for executives & admins)
      */
     public function members(Request $request, $id)
     {
@@ -338,21 +450,91 @@ class AssociationController extends Controller
             ->where('user_id', $request->user()->id)
             ->first();
 
-        if (!$membership || !in_array($membership->role, ['president', 'vice_president', 'secretary'])) {
+        if ($request->user()->role !== 'admin' && (!$membership || !in_array($membership->role, ['president', 'vice_president', 'secretary']))) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only executives can view member list'
+                'message' => 'Only executives or administrators can view member list'
             ], 403);
         }
 
         $members = AssociationMember::with('user')
             ->where('association_id', $association->id)
-            ->where('status', 'active')
             ->get();
 
         return response()->json([
             'success' => true,
             'data' => $members
+        ]);
+    }
+
+    /**
+     * Add document to association archive
+     */
+    public function addDocument(Request $request, $id)
+    {
+        $association = Association::findOrFail($id);
+
+        // Authorization check - only admin or president
+        $membership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$membership || $membership->role !== 'president')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to add documents'
+            ], 403);
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'file_url' => 'required|string',
+            'type' => 'nullable|string|max:10',
+        ]);
+
+        $document = \App\Models\AssociationDocument::create([
+            'association_id' => $association->id,
+            'title' => $request->title,
+            'file_path' => $request->file_url,
+            'file_type' => $request->type ?? 'PDF',
+            'uploaded_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document added successfully to archives',
+            'data' => $document
+        ], 201);
+    }
+
+    /**
+     * Delete document from association archive
+     */
+    public function deleteDocument(Request $request, $associationId, $documentId)
+    {
+        $association = Association::findOrFail($associationId);
+
+        // Authorization check - only admin or president
+        $membership = AssociationMember::where('association_id', $association->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($request->user()->role !== 'admin' && (!$membership || $membership->role !== 'president')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to delete documents'
+            ], 403);
+        }
+
+        $document = \App\Models\AssociationDocument::where('association_id', $associationId)
+            ->where('id', $documentId)
+            ->firstOrFail();
+
+        $document->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Document removed from archives'
         ]);
     }
 }

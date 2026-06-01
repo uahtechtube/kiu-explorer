@@ -228,6 +228,24 @@ class AuthController extends Controller
     }
 
     /**
+     * Update the user's Expo push token.
+     */
+    public function updatePushToken(Request $request)
+    {
+        $request->validate([
+            'expo_push_token' => 'required|string',
+        ]);
+
+        $request->user()->update([
+            'expo_push_token' => $request->expo_push_token
+        ]);
+
+        return response()->json([
+            'message' => 'Push token updated successfully.'
+        ]);
+    }
+
+    /**
      * Helper method to upload base64 image
      */
     private function uploadBase64Image($base64String, $folder = 'images')
@@ -260,5 +278,23 @@ class AuthController extends Controller
         \Storage::disk('public')->put($path, $imageData);
         
         return 'storage/' . $path;
+    }
+
+    /**
+     * Revoke current access token on logout
+     */
+    public function logout(Request $request)
+    {
+        $user = $request->user();
+        if ($user) {
+            $token = $user->currentAccessToken();
+            if ($token && method_exists($token, 'delete')) {
+                $token->delete();
+            }
+        }
+
+        return response()->json([
+            'message' => 'Logged out successfully.'
+        ], 200);
     }
 }

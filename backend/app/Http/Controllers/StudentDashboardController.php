@@ -27,13 +27,66 @@ class StudentDashboardController extends Controller
             // 1. Current Session
             $currentSession = AcademicSession::where('is_current', true)->first();
 
-            // 2. Available Courses Count (Instead of Enrolled)
-            $availableCount = \App\Models\Course::count();
+            // 2. Real Enrolled Course Count
+            $enrolledCount = \App\Models\CourseRegistration::where('user_id', $user->id)->count();
 
-            // 3. Upcoming Virtual Classes (Real data)
-            $upcomingClasses = \App\Models\VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
-                ->whereIn('status', ['upcoming', 'active'])
-                ->orderBy('scheduled_at', 'asc')
+            // Calculate dynamic CGPA based on student course registrations
+            $registrations = \App\Models\CourseRegistration::with('course')
+                ->where('user_id', $user->id)
+                ->get();
+
+            $totalPoints = 0;
+            $totalUnits = 0;
+
+            foreach ($registrations as $reg) {
+                $grade = $reg->grade;
+                // If grade is not directly specified but total_score is present, calculate grade
+                if (!$grade && $reg->total_score !== null) {
+                    $score = $reg->total_score;
+                    if ($score >= 70) $grade = 'A';
+                    elseif ($score >= 60) $grade = 'B';
+                    elseif ($score >= 50) $grade = 'C';
+                    elseif ($score >= 45) $grade = 'D';
+                    elseif ($score >= 40) $grade = 'E';
+                    else $grade = 'F';
+                }
+
+                if ($grade) {
+                    $unit = $reg->course ? $reg->course->unit : 0;
+                    $gp = 0;
+                    switch (strtoupper($grade)) {
+                        case 'A': $gp = 5; break;
+                        case 'B': $gp = 4; break;
+                        case 'C': $gp = 3; break;
+                        case 'D': $gp = 2; break;
+                        case 'E': $gp = 1; break;
+                        case 'F': $gp = 0; break;
+                    }
+                    $totalPoints += $gp * $unit;
+                    $totalUnits += $unit;
+                }
+            }
+
+            $cgpaVal = $totalUnits > 0 ? ($totalPoints / $totalUnits) : 0.00;
+            $cgpa = number_format($cgpaVal, 2);
+
+            // Get student's enrolled courses to filter upcoming classes and attendance
+            $enrolledCourseIds = $registrations->pluck('course_id')->toArray();
+
+            // 3. Upcoming Virtual Classes (Real data filtered by enrolled courses)
+            $upcomingClassesQuery = \App\Models\VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
+                ->whereIn('status', ['upcoming', 'active']);
+
+            if (!empty($enrolledCourseIds)) {
+                // Try fetching classes for enrolled courses first
+                $tempQuery = clone $upcomingClassesQuery;
+                $tempQuery->whereIn('course_id', $enrolledCourseIds);
+                if ($tempQuery->count() > 0) {
+                    $upcomingClassesQuery->whereIn('course_id', $enrolledCourseIds);
+                }
+            }
+
+            $upcomingClasses = $upcomingClassesQuery->orderBy('scheduled_at', 'asc')
                 ->limit(5)
                 ->get()
                 ->map(function ($class) {
@@ -69,11 +122,36 @@ class StudentDashboardController extends Controller
             // 5. Dynamic Stats
             $totalTutorials = \App\Models\LibraryResource::count();
             
-            // Attendance Rate - Calculated from all Live Classes (since no enrollment)
-            $totalClasses = \App\Models\VirtualClass::count();
-            
-            $attendedClasses = \App\Models\Attendance::where('user_id', $user->id)->count();
-            $rate = $totalClasses > 0 ? round(($attendedClasses / $totalClasses) * 100) : 0;
+            // Try general attendance first, fallback to virtual classes attendance
+            $attendanceStats = \App\Models\GeneralAttendance::where('student_id', $user->id)
+                ->selectRaw('
+                    COUNT(*) as total_days,
+                    SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present_days
+                ')
+                ->first();
+
+            if ($attendanceStats && $attendanceStats->total_days > 0) {
+                $rate = round(($attendanceStats->present_days / $attendanceStats->total_days) * 100);
+            } else {
+                $totalClassesQuery = \App\Models\VirtualClass::query();
+                if (!empty($enrolledCourseIds)) {
+                    $totalClassesQuery->whereIn('course_id', $enrolledCourseIds);
+                } else {
+                    $totalClassesQuery->whereIn('course_id', [-1]);
+                }
+                $totalClasses = $totalClassesQuery->count();
+                
+                $attendedClasses = \App\Models\Attendance::where('user_id', $user->id)
+                    ->whereHas('virtualClass', function($q) use ($enrolledCourseIds) {
+                        if (!empty($enrolledCourseIds)) {
+                            $q->whereIn('course_id', $enrolledCourseIds);
+                        } else {
+                            $q->whereIn('course_id', [-1]);
+                        }
+                    })
+                    ->count();
+                $rate = $totalClasses > 0 ? round(($attendedClasses / $totalClasses) * 100) : 0;
+            }
 
             // 6. Latest Library Resources
             $latestResources = \App\Models\LibraryResource::where('is_approved', true)
@@ -96,7 +174,7 @@ class StudentDashboardController extends Controller
             return response()->json([
                 'student' => [
                     'name' => $user->surname . ' ' . $user->first_name,
-                    'matric_number' => $user->studentProfile?->matric_number ?? 'N/A',
+                    'matric_number' => $user->matric_number ?? 'N/A',
                     'level' => $user->studentProfile?->level ?? 'N/A',
                     'avatar' => $user->passport_photograph 
                         ? (strpos($user->passport_photograph, 'http') === 0 
@@ -106,8 +184,8 @@ class StudentDashboardController extends Controller
                 ],
                 'session' => $currentSession?->name ?? 'N/A',
                 'overview' => [
-                    'enrolled_courses' => $availableCount,
-                    'cgpa' => '4.25', 
+                    'enrolled_courses' => $enrolledCount,
+                    'cgpa' => $cgpa, 
                     'attendance' => $rate . '%',
                     'total_tutorials' => $totalTutorials,
                     'total_classes' => $upcomingClasses->count(),

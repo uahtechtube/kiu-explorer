@@ -99,4 +99,47 @@ class CourseController extends Controller
         $courses = Course::with('department.faculty')->get();
         return response()->json($courses);
     }
+
+    /**
+     * Update an existing course (Admin/Lecturer).
+     */
+    public function update(Request $request, $id)
+    {
+        $course = Course::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'department_id' => 'sometimes|required|exists:departments,id',
+            'code' => 'sometimes|required|string|unique:courses,code,' . $id,
+            'title' => 'sometimes|required|string',
+            'unit' => 'sometimes|required|integer|min:1',
+            'level' => 'sometimes|required|string',
+            'semester' => 'sometimes|required|string',
+            'is_elective' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $course->update($request->all());
+
+        return response()->json([
+            'message' => 'Course updated successfully',
+            'course' => $course
+        ]);
+    }
+
+    /**
+     * Delete an existing course (Admin/Lecturer).
+     */
+    public function destroy($id)
+    {
+        $course = Course::findOrFail($id);
+        $course->delete();
+
+        return response()->json([
+            'message' => 'Course deleted successfully'
+        ]);
+    }
 }
+

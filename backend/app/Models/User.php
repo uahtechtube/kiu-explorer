@@ -40,6 +40,7 @@ class User extends Authenticatable
         'username',
         'role',
         'account_status',
+        'expo_push_token',
         'last_login_date',
         'password',
     ];
@@ -59,7 +60,7 @@ class User extends Authenticatable
      *
      * @var array
      */
-    protected $appends = ['name'];
+    protected $appends = ['name', 'registration_number'];
 
     /**
      * Get the attributes that should be cast.
@@ -86,9 +87,43 @@ class User extends Authenticatable
         return trim(($this->first_name ?? '') . ' ' . ($this->surname ?? ''));
     }
 
+    /**
+     * Get the student's registration number (alias for matric_number).
+     *
+     * @return string|null
+     */
+    public function getRegistrationNumberAttribute()
+    {
+        return $this->matric_number;
+    }
+
+    /**
+     * Get the user's passport photograph as an absolute URL.
+     *
+     * @param  string|null  $value
+     * @return string
+     */
+    public function getPassportPhotographAttribute($value)
+    {
+        if (!$value) {
+            return url('assets/defaults/avatar.png');
+        }
+
+        if (strpos($value, 'http') === 0) {
+            return $value;
+        }
+
+        return url($value);
+    }
+
     public function studentProfile()
     {
         return $this->hasOne(StudentProfile::class);
+    }
+
+    public function roommateProfile()
+    {
+        return $this->hasOne(HostelRoommateProfile::class, 'student_id');
     }
 
     public function lecturerProfile()

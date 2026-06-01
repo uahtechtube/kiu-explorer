@@ -29,6 +29,35 @@ class Event extends Model
         'end_time' => 'datetime',
     ];
 
+    protected $appends = ['type', 'location', 'banner_url'];
+
+    public function getTypeAttribute()
+    {
+        $category = $this->category;
+        switch ($category) {
+            case 'Academic':
+                return 'Academic';
+            case 'Workshop':
+                return 'Career';
+            case 'Social':
+            case 'Sports':
+            case 'Cultural':
+                return 'Social';
+            default:
+                return 'Social';
+        }
+    }
+
+    public function getLocationAttribute()
+    {
+        return $this->venue;
+    }
+
+    public function getBannerUrlAttribute()
+    {
+        return $this->image_url ?? $this->banner ?? 'https://images.unsplash.com/photo-1540575861501-7ad060e39fe6?w=800&q=80';
+    }
+
     public function association()
     {
         return $this->belongsTo(Association::class);

@@ -29,6 +29,11 @@ class Association extends Model
         return $this->hasMany(AssociationMember::class);
     }
 
+    public function documents()
+    {
+        return $this->hasMany(AssociationDocument::class);
+    }
+
     public function posts()
     {
         return $this->hasMany(Post::class);

@@ -15,6 +15,7 @@ class Post extends Model
         'content',
         'media_path',
         'type',
+        'visibility',
     ];
 
     public function user()

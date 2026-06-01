@@ -7,16 +7,20 @@ use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-class RoleController extends Controller
+use Illuminate\Routing\Controllers\HasMiddleware;
+
+class RoleController extends Controller implements HasMiddleware
 {
-    public function __construct()
+    public static function middleware(): array
     {
-        $this->middleware(function ($request, $next) {
-            if ($request->user() && $request->user()->role !== 'admin') {
-                return response()->json(['message' => 'Unauthorized.'], 403);
+        return [
+            function ($request, $next) {
+                if ($request->user() && $request->user()->role !== 'admin') {
+                    return response()->json(['message' => 'Unauthorized.'], 403);
+                }
+                return $next($request);
             }
-            return $next($request);
-        });
+        ];
     }
 
     /**

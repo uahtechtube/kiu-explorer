@@ -18,6 +18,7 @@ return new class extends Migration
         });
 
         Schema::table('attendances', function (Blueprint $table) {
+            $table->string('status')->nullable()->default('present');
             $table->boolean('is_hand_raised')->default(false);
         });
     }
@@ -27,7 +28,12 @@ return new class extends Migration
         Schema::dropIfExists('virtual_class_messages');
         
         Schema::table('attendances', function (Blueprint $table) {
-            $table->dropColumn('is_hand_raised');
+            if (Schema::hasColumn('attendances', 'status')) {
+                $table->dropColumn('status');
+            }
+            if (Schema::hasColumn('attendances', 'is_hand_raised')) {
+                $table->dropColumn('is_hand_raised');
+            }
         });
     }
 };

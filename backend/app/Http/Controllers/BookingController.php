@@ -16,6 +16,7 @@ class BookingController extends Controller
         $request->validate([
             'hostel_room_id' => 'required|exists:hostel_rooms,id',
             'academic_session' => 'required|string',
+            'payment_reference' => 'required|string|exists:payments,reference',
         ]);
 
         $user = $request->user();
@@ -48,11 +49,14 @@ class BookingController extends Controller
             ], 400);
         }
 
+        $payment = \App\Models\Payment::where('reference', $request->payment_reference)->firstOrFail();
+
         $booking = HostelBooking::create([
             'student_id' => $user->id,
             'hostel_room_id' => $room->id,
             'academic_session' => $request->academic_session,
             'status' => 'pending',
+            'payment_id' => $payment->id,
             'booked_at' => now(),
         ]);
 

@@ -31,6 +31,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
     Route::patch('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/profile/upload-image', [AuthController::class, 'uploadProfileImage']);
+    Route::post('/profile/push-token', [AuthController::class, 'updatePushToken']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // Admin & Lecturer Operations
     Route::post('/admin/create-lecturer', [\App\Http\Controllers\AdminController::class, 'createLecturer']);
@@ -40,7 +42,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Course Management
     Route::get('/courses', [\App\Http\Controllers\CourseController::class, 'index']);
     Route::post('/courses', [\App\Http\Controllers\CourseController::class, 'store']); 
+    Route::put('/courses/{id}', [\App\Http\Controllers\CourseController::class, 'update']);
+    Route::delete('/courses/{id}', [\App\Http\Controllers\CourseController::class, 'destroy']);
     Route::post('/courses/enroll', [\App\Http\Controllers\CourseController::class, 'enroll']); 
+
 
     // Tutorials
     Route::get('/tutorials', [\App\Http\Controllers\TutorialController::class, 'index']);
@@ -74,6 +79,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/lecturer/exams', [\App\Http\Controllers\ExamController::class, 'lecturerExams']);
     Route::put('/lecturer/exams/{id}', [\App\Http\Controllers\ExamController::class, 'update']);
     Route::delete('/lecturer/exams/{id}', [\App\Http\Controllers\ExamController::class, 'destroy']);
+    Route::get('/lecturer/exams/{id}/attempts-to-mark', [\App\Http\Controllers\ExamController::class, 'getAttemptsToMark']);
+    Route::post('/lecturer/exams/attempts/{id}/grade', [\App\Http\Controllers\ExamController::class, 'gradeTheoryAttempt']);
     Route::post('/exams/{id}/questions', [\App\Http\Controllers\ExamController::class, 'addQuestions']);
     Route::post('/exams/{id}/start', [\App\Http\Controllers\ExamController::class, 'startAttempt']);
     Route::post('/exams/attempts/{id}/submit', [\App\Http\Controllers\ExamController::class, 'submitAttempt']);
@@ -124,6 +131,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
         
         // Notifications
         Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+        Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+        Route::delete('/notifications/clear-all', [\App\Http\Controllers\NotificationController::class, 'clearAll']);
         
         // Exams
         Route::get('/exams', [\App\Http\Controllers\ExamController::class, 'index']);
@@ -133,19 +143,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/exams/{id}/save-answer', [\App\Http\Controllers\ExamController::class, 'saveAnswer']);
         Route::post('/exams/{id}/submit', [\App\Http\Controllers\ExamController::class, 'submitAttempt']);
         
-        // Associations
+        // Associations (Full Student CRUD & Approvals)
         Route::get('/associations', [\App\Http\Controllers\AssociationController::class, 'index']);
+        Route::post('/associations', [\App\Http\Controllers\AssociationController::class, 'store']);
         Route::get('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'show']);
+        Route::put('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'update']);
+        Route::delete('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'destroy']);
         Route::post('/associations/{id}/join', [\App\Http\Controllers\AssociationController::class, 'join']);
         Route::post('/associations/{id}/leave', [\App\Http\Controllers\AssociationController::class, 'leave']);
         Route::get('/associations/my/memberships', [\App\Http\Controllers\AssociationController::class, 'myAssociations']);
         Route::get('/associations/{id}/members', [\App\Http\Controllers\AssociationController::class, 'members']);
+        Route::get('/associations/{id}/requests', [\App\Http\Controllers\AssociationController::class, 'pendingRequests']);
+        Route::post('/associations/{id}/requests/{userId}/approve', [\App\Http\Controllers\AssociationController::class, 'approveRequest']);
+        Route::post('/associations/{id}/requests/{userId}/reject', [\App\Http\Controllers\AssociationController::class, 'rejectRequest']);
+        Route::post('/associations/{id}/documents', [\App\Http\Controllers\AssociationController::class, 'addDocument']);
+        Route::delete('/associations/{id}/documents/{docId}', [\App\Http\Controllers\AssociationController::class, 'deleteDocument']);
         
         // Practice Quizzes (Added to match frontend)
         Route::get('/practice-quizzes', [\App\Http\Controllers\QuizController::class, 'getPracticeData']);
 
         // Announcements (Added to match frontend)
         Route::get('/announcements', [\App\Http\Controllers\AnnouncementController::class, 'index']);
+        Route::get('/announcements/{id}', [\App\Http\Controllers\AnnouncementController::class, 'show']);
 
         // Social Hub (Added to match frontend)
         Route::get('/posts', [\App\Http\Controllers\SocialController::class, 'index']);
@@ -162,6 +181,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/payments/summary', [\App\Http\Controllers\PaymentController::class, 'summary']);
         Route::get('/payments/{id}', [\App\Http\Controllers\PaymentController::class, 'show']);
         Route::post('/payments/initiate', [\App\Http\Controllers\PaymentController::class, 'initiate']);
+        Route::post('/payments/{reference}/resume', [\App\Http\Controllers\PaymentController::class, 'resume']);
         Route::get('/payments/{id}/receipt', [\App\Http\Controllers\PaymentController::class, 'downloadReceipt']);
 
         // Hostel Management — static routes MUST come before /{id} to avoid being swallowed
@@ -169,6 +189,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/hostels/my-bookings', [\App\Http\Controllers\BookingController::class, 'myBookings']);
         Route::post('/hostels/book', [\App\Http\Controllers\BookingController::class, 'store']);
         Route::post('/hostels/bookings/{id}/cancel', [\App\Http\Controllers\BookingController::class, 'cancel']);
+
+        // Hostel Rules dynamic view
+        Route::get('/hostels/{id}/rules', [\App\Http\Controllers\HostelRuleController::class, 'index']);
+
+        // Hostel Attendance routes
+        Route::get('/hostels/attendance', [\App\Http\Controllers\HostelAttendanceController::class, 'history']);
+        Route::post('/hostels/attendance/check', [\App\Http\Controllers\HostelAttendanceController::class, 'check']);
+
+        // Hostel Leaves routes
+        Route::get('/hostels/leaves', [\App\Http\Controllers\HostelLeaveController::class, 'index']);
+        Route::post('/hostels/leaves', [\App\Http\Controllers\HostelLeaveController::class, 'store']);
+
+        // Hostel Visitors routes
+        Route::get('/hostels/visitors', [\App\Http\Controllers\HostelVisitorController::class, 'index']);
+        Route::post('/hostels/visitors', [\App\Http\Controllers\HostelVisitorController::class, 'store']);
+
+        // Roommates matching routes
+        Route::get('/hostels/roommates/profile', [\App\Http\Controllers\HostelRoommateController::class, 'getProfile']);
+        Route::post('/hostels/roommates/profile', [\App\Http\Controllers\HostelRoommateController::class, 'saveProfile']);
+        Route::get('/hostels/roommates/matches', [\App\Http\Controllers\HostelRoommateController::class, 'getMatches']);
 
         // Hostel Complaints/Maintenance — also static, must precede /{id}
         Route::get('/hostels/complaints', [\App\Http\Controllers\HostelComplaintController::class, 'index']);
@@ -184,6 +224,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/events/{id}', [\App\Http\Controllers\EventController::class, 'destroy']);
 
     // Associations Management (Admin/Lecturer)
+    Route::get('/associations/my/memberships', [\App\Http\Controllers\AssociationController::class, 'myAssociations']);
     Route::post('/associations', [\App\Http\Controllers\AssociationController::class, 'store']);
     Route::put('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'update']);
     Route::delete('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'destroy']);
@@ -191,10 +232,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Social Hub
     Route::get('/posts', [\App\Http\Controllers\SocialController::class, 'index']);
     Route::post('/posts', [\App\Http\Controllers\SocialController::class, 'store']);
+    Route::put('/posts/{id}', [\App\Http\Controllers\SocialController::class, 'update']);
+    Route::delete('/posts/{id}', [\App\Http\Controllers\SocialController::class, 'destroy']);
     Route::post('/posts/{id}/like', [\App\Http\Controllers\SocialController::class, 'like']);
     Route::post('/posts/{id}/comment', [\App\Http\Controllers\SocialController::class, 'comment']);
+    Route::post('/posts/{id}/report', [\App\Http\Controllers\SocialController::class, 'report']);
+
+    // Friendships & Followers
+    Route::get('/friends', [\App\Http\Controllers\FriendController::class, 'listFriends']);
+    Route::get('/friends/requests/pending', [\App\Http\Controllers\FriendController::class, 'listPendingRequests']);
+    Route::post('/friends/request', [\App\Http\Controllers\FriendController::class, 'sendRequest']);
+    Route::post('/friends/request/{id}/accept', [\App\Http\Controllers\FriendController::class, 'acceptRequest']);
+    Route::post('/friends/request/{id}/reject', [\App\Http\Controllers\FriendController::class, 'rejectRequest']);
+    Route::delete('/friends/{id}', [\App\Http\Controllers\FriendController::class, 'unfriend']);
 
     // Communication & Utilities
+    Route::get('/chats/lookup-user', [\App\Http\Controllers\ChatController::class, 'lookupUser']);
     Route::get('/chats', [\App\Http\Controllers\ChatController::class, 'index']);
     Route::post('/chats', [\App\Http\Controllers\ChatController::class, 'startConversation']);
     Route::get('/chats/{id}/messages', [\App\Http\Controllers\ChatController::class, 'getMessages']);
@@ -221,6 +274,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('/school/rules/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'updateRule']); // Admin
     Route::delete('/school/rules/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'deleteRule']); // Admin
     Route::get('/school/staff', [\App\Http\Controllers\SchoolInfoController::class, 'getStaffDirectory']);
+    Route::post('/school/staff', [\App\Http\Controllers\SchoolInfoController::class, 'storeStaff']); // Admin
+    Route::put('/school/staff/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'updateStaff']); // Admin
+    Route::delete('/school/staff/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'deleteStaff']); // Admin
+
     Route::get('/school/calendar', [\App\Http\Controllers\SchoolInfoController::class, 'getAcademicCalendar']);
     Route::post('/school/calendar', [\App\Http\Controllers\SchoolInfoController::class, 'storeCalendarEvent']); // Admin
     Route::put('/school/calendar/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'updateCalendarEvent']); // Admin
@@ -249,8 +306,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Assignments
     Route::get('/assignments', [\App\Http\Controllers\AssignmentController::class, 'index']);
+    Route::get('/assignments/{id}', [\App\Http\Controllers\AssignmentController::class, 'show']);
     Route::post('/assignments', [\App\Http\Controllers\AssignmentController::class, 'store']); // Lecturer
     Route::post('/assignments/{id}/submit', [\App\Http\Controllers\AssignmentController::class, 'submit']); // Student
+    Route::get('/submissions/{id}', [\App\Http\Controllers\AssignmentController::class, 'getSubmission']);
     Route::post('/submissions/{id}/grade', [\App\Http\Controllers\AssignmentController::class, 'grade']); // Lecturer
     Route::get('/assignments/{id}/submissions', [\App\Http\Controllers\AssignmentController::class, 'getSubmissions']); // Lecturer
 
@@ -321,6 +380,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/virtual-classes/{id}/participants', [\App\Http\Controllers\VirtualClassController::class, 'getParticipants']);
         Route::post('/virtual-classes/{id}/start', [\App\Http\Controllers\VirtualClassController::class, 'startClass']);
         Route::post('/virtual-classes/{id}/end', [\App\Http\Controllers\VirtualClassController::class, 'endClass']);
+        Route::post('/virtual-classes/{id}/toggle-chat-mute', [\App\Http\Controllers\VirtualClassController::class, 'toggleChatMute']);
+
+        // Assignments Management
+        Route::get('/assignments', [\App\Http\Controllers\AssignmentController::class, 'index']);
+        Route::get('/assignments/{id}', [\App\Http\Controllers\AssignmentController::class, 'show']);
+        Route::post('/assignments', [\App\Http\Controllers\AssignmentController::class, 'store']);
+        Route::get('/assignments/{id}/submissions', [\App\Http\Controllers\AssignmentController::class, 'getSubmissions']);
+        Route::post('/assignments/submissions/{id}/grade', [\App\Http\Controllers\AssignmentController::class, 'grade']);
     });
 
     // Reporting System
@@ -332,6 +399,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Admin Panel Logic
     Route::prefix('admin')->group(function () {
+        // Academic Structure CRUD
+        Route::get('/faculties', [\App\Http\Controllers\AdminAcademicController::class, 'getFaculties']);
+        Route::post('/faculties', [\App\Http\Controllers\AdminAcademicController::class, 'storeFaculty']);
+        Route::put('/faculties/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'updateFaculty']);
+        Route::delete('/faculties/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'destroyFaculty']);
+
+        Route::get('/departments', [\App\Http\Controllers\AdminAcademicController::class, 'getDepartments']);
+        Route::post('/departments', [\App\Http\Controllers\AdminAcademicController::class, 'storeDepartment']);
+        Route::put('/departments/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'updateDepartment']);
+        Route::delete('/departments/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'destroyDepartment']);
+
+        Route::get('/programmes', [\App\Http\Controllers\AdminAcademicController::class, 'getProgrammes']);
+        Route::post('/programmes', [\App\Http\Controllers\AdminAcademicController::class, 'storeProgramme']);
+        Route::put('/programmes/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'updateProgramme']);
+        Route::delete('/programmes/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'destroyProgramme']);
+
+        Route::get('/sessions', [\App\Http\Controllers\AdminAcademicController::class, 'getSessions']);
+        Route::post('/sessions', [\App\Http\Controllers\AdminAcademicController::class, 'storeSession']);
+        Route::put('/sessions/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'updateSession']);
+        Route::delete('/sessions/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'destroySession']);
+
+        Route::get('/offices', [\App\Http\Controllers\AdminAcademicController::class, 'getOffices']);
+        Route::post('/offices', [\App\Http\Controllers\AdminAcademicController::class, 'storeOffice']);
+        Route::put('/offices/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'updateOffice']);
+        Route::delete('/offices/{id}', [\App\Http\Controllers\AdminAcademicController::class, 'destroyOffice']);
+
         // Dashboard & Overview
         Route::get('/stats', [\App\Http\Controllers\AdminController::class, 'stats']);
         Route::get('/overview', [\App\Http\Controllers\AdminController::class, 'systemOverview']);
@@ -382,6 +475,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/health', [\App\Http\Controllers\AdminController::class, 'systemHealth']);
             Route::get('/logs', [\App\Http\Controllers\AdminController::class, 'activityLogs']);
             Route::get('/storage', [\App\Http\Controllers\AdminController::class, 'storageStats']);
+            Route::get('/settings', [\App\Http\Controllers\AdminController::class, 'getSystemSettings']);
+            Route::post('/settings/toggle', [\App\Http\Controllers\AdminController::class, 'updateSystemToggle']);
+            Route::post('/settings/session', [\App\Http\Controllers\AdminController::class, 'setActiveSession']);
+            Route::post('/settings/reset', [\App\Http\Controllers\AdminController::class, 'resetSystemSettings']);
         });
         
         // Analytics Export
@@ -395,7 +492,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/{id}', [\App\Http\Controllers\AuditLogController::class, 'show']);
         });
         
+        // Event Approvals (Admin)
+        Route::post('/events/{id}/approve', function ($id) {
+            $event = \App\Models\Event::findOrFail($id);
+            $event->update(['status' => 'approved']);
+            return response()->json(['success' => true, 'message' => 'Event approved successfully.']);
+        });
+        Route::post('/events/{id}/reject', function ($id) {
+            $event = \App\Models\Event::findOrFail($id);
+            $event->update(['status' => 'rejected']);
+            return response()->json(['success' => true, 'message' => 'Event rejected successfully.']);
+        });
+
         // System Alerts
+
         Route::prefix('alerts')->group(function () {
             Route::get('/', [\App\Http\Controllers\SystemAlertController::class, 'index']);
             Route::post('/', [\App\Http\Controllers\SystemAlertController::class, 'store']);
@@ -437,6 +547,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::get('/{hostelId}/rooms', [\App\Http\Controllers\AdminHostelController::class, 'roomsByHostel']);
             Route::post('/{hostelId}/rooms', [\App\Http\Controllers\AdminHostelController::class, 'storeRoom']);
             Route::put('/rooms/{id}', [\App\Http\Controllers\AdminHostelController::class, 'updateRoom']);
+
+            // Admin Rules Management
+            Route::get('/{hostelId}/rules', [\App\Http\Controllers\HostelRuleController::class, 'index']);
+            Route::post('/{hostelId}/rules', [\App\Http\Controllers\HostelRuleController::class, 'store']);
+            Route::put('/rules/{id}', [\App\Http\Controllers\HostelRuleController::class, 'update']);
+            Route::delete('/rules/{id}', [\App\Http\Controllers\HostelRuleController::class, 'destroy']);
+
+            // Admin Attendance Logs
+            Route::get('/attendance/logs', [\App\Http\Controllers\HostelAttendanceController::class, 'index']);
+
+            // Admin Leaves Management
+            Route::get('/leaves/requests', [\App\Http\Controllers\HostelLeaveController::class, 'adminIndex']);
+            Route::patch('/leaves/{id}/status', [\App\Http\Controllers\HostelLeaveController::class, 'updateStatus']);
+
+            // Admin Visitors Logs
+            Route::get('/visitors/logs', [\App\Http\Controllers\HostelVisitorController::class, 'adminIndex']);
+            Route::patch('/visitors/{id}/check-in', [\App\Http\Controllers\HostelVisitorController::class, 'checkIn']);
+            Route::patch('/visitors/{id}/check-out', [\App\Http\Controllers\HostelVisitorController::class, 'checkOut']);
 
             // Admin Complaints management
             Route::get('/complaints', [\App\Http\Controllers\AdminHostelController::class, 'allComplaints']);
