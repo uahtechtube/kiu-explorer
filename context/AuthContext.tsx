@@ -8,10 +8,14 @@ interface User {
     name: string;
     email: string;
     role: 'student' | 'lecturer' | 'admin';
+    reg_no?: string; // Registration number for students
+    permissions?: string[]; // Added for role-based access control
     gender?: string;
     phone_number?: string;
     state_of_origin?: string;
     lga?: string;
+    passport_photograph?: string;
+    residential_address?: string;
     student_profile?: {
         faculty?: { name: string };
         department?: { name: string };
@@ -19,14 +23,22 @@ interface User {
         guardian_name?: string;
         guardian_phone?: string;
     };
+    lecturer_profile?: {
+        faculty?: { name: string };
+        department?: { name: string };
+        office_location?: string;
+        office_hours?: string;
+        specialization?: string;
+    };
 }
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
     isLoading: boolean;
-    signIn: (token: string, user: User) => Promise<void>;
+    signIn: (token: string | null, user: User) => Promise<void>;
     signOut: () => Promise<void>;
+    forceLogout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,10 +92,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    const signIn = async (newToken: string, newUser: User) => {
-        await storage.setItem('token', newToken);
+    const signIn = async (newToken: string | null, newUser: User) => {
+        if (newToken) {
+            await storage.setItem('token', newToken);
+            setToken(newToken);
+        }
         await storage.setItem('user', JSON.stringify(newUser));
-        setToken(newToken);
         setUser(newUser);
     };
 
@@ -94,8 +108,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
     };
 
+    const forceLogout = async () => {
+        // Force logout without API call (for token expiration/401 errors)
+        await storage.deleteItem('token');
+        await storage.deleteItem('user');
+        setToken(null);
+        setUser(null);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+        <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, forceLogout }}>
             {children}
         </AuthContext.Provider>
     );

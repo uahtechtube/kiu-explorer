@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator, Modal, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Mail, Lock, User as UserIcon, ArrowLeft, ArrowRight, CheckCircle2, School, GraduationCap, ChevronDown, Check } from 'lucide-react-native';
+import { Mail, Lock, User as UserIcon, ArrowLeft, ArrowRight, CheckCircle2, School, GraduationCap, ChevronDown, Check, Camera, Calendar } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,6 +18,10 @@ export default function RegisterScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState<'faculty' | 'department' | 'programme' | 'session' | 'gender' | null>(null);
 
+    // Image state
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [profileImageBase64, setProfileImageBase64] = useState<string | null>(null);
+
     // Form Data
     const [formData, setFormData] = useState({
         surname: '',
@@ -29,7 +34,10 @@ export default function RegisterScreen() {
         lga: '',
         email: '',
         phone_number: '',
+        alternative_phone_number: '',
         residential_address: '',
+        city: '',
+        state_of_residence: '',
         password: '',
         password_confirmation: '',
         faculty_id: '',
@@ -38,6 +46,11 @@ export default function RegisterScreen() {
         academic_session_id: '',
         level: '',
         matric_number: '',
+        guardian_name: '',
+        guardian_relationship: '',
+        guardian_phone: '',
+        guardian_email: '',
+        guardian_address: '',
     });
 
     // Data from API
@@ -117,15 +130,50 @@ export default function RegisterScreen() {
         setModalVisible(false);
     };
 
+    const pickImage = async () => {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (permissionResult.granted === false) {
+            Alert.alert('Permission Required', 'Please allow access to your photo library');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+            base64: true,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setProfileImage(result.assets[0].uri);
+            if (result.assets[0].base64) {
+                setProfileImageBase64(result.assets[0].base64);
+            }
+        }
+    };
+
     const handleRegister = async () => {
         if (!formData.faculty_id || !formData.department_id || !formData.programme_id || !formData.academic_session_id || !formData.level || !formData.matric_number) {
             Alert.alert('Error', 'Please complete all academic details');
             return;
         }
 
+        if (!formData.guardian_name || !formData.guardian_phone || !formData.guardian_relationship) {
+            Alert.alert('Error', 'Please complete guardian information');
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const response = await api.post('/register', formData);
+            // Prepare registration data
+            const registrationData = {
+                ...formData,
+                passport_photograph: profileImageBase64 ? `data:image/jpeg;base64,${profileImageBase64}` : undefined,
+            };
+
+            const response = await api.post('/register', registrationData);
             const { token, user } = response.data;
             await signIn(token, user);
         } catch (error: any) {
@@ -148,8 +196,8 @@ export default function RegisterScreen() {
 
     const nextStep = () => {
         if (step === 1) {
-            if (!formData.surname || !formData.first_name || !formData.email || !formData.password) {
-                Alert.alert('Error', 'Please fill in all personal details');
+            if (!formData.surname || !formData.first_name || !formData.email || !formData.password || !formData.dob) {
+                Alert.alert('Error', 'Please fill in all personal details including Date of Birth');
                 return;
             }
             if (formData.password !== formData.password_confirmation) {
@@ -309,6 +357,32 @@ export default function RegisterScreen() {
                             </View>
 
                             <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Other Names (Optional)</Text>
+                                <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14">
+                                    <UserIcon size={20} color="#6B7280" />
+                                    <TextInput
+                                        className="flex-1 ml-3 text-primary"
+                                        placeholder="Middle name or other names"
+                                        value={formData.other_names}
+                                        onChangeText={(val) => setFormData({ ...formData, other_names: val })}
+                                    />
+                                </View>
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Date of Birth</Text>
+                                <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14">
+                                    <Calendar size={20} color="#6B7280" />
+                                    <TextInput
+                                        className="flex-1 ml-3 text-primary"
+                                        placeholder="YYYY-MM-DD (e.g. 2000-01-15)"
+                                        value={formData.dob}
+                                        onChangeText={(val) => setFormData({ ...formData, dob: val })}
+                                    />
+                                </View>
+                            </View>
+
+                            <View>
                                 <Text className="text-primary font-semibold mb-2 ml-1">Email</Text>
                                 <View className="flex-row items-center bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14">
                                     <Mail size={20} color="#6B7280" />
@@ -433,6 +507,24 @@ export default function RegisterScreen() {
                     ) : (
                         /* Step 3: Bio Data */
                         <View className="mt-8 space-y-4">
+                            {/* Profile Image */}
+                            <View className="items-center mb-4">
+                                <Text className="text-primary font-semibold mb-3">Profile Photo (Optional)</Text>
+                                <TouchableOpacity
+                                    onPress={pickImage}
+                                    className="w-32 h-32 bg-gray-50 border-2 border-dashed border-gray-300 rounded-full items-center justify-center"
+                                >
+                                    {profileImage ? (
+                                        <Image source={{ uri: profileImage }} className="w-32 h-32 rounded-full" />
+                                    ) : (
+                                        <View className="items-center">
+                                            <Camera size={32} color="#6B7280" />
+                                            <Text className="text-gray-400 text-xs mt-2">Tap to upload</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+
                             <View>
                                 <Text className="text-primary font-semibold mb-2 ml-1">Gender</Text>
                                 <TouchableOpacity
@@ -458,6 +550,27 @@ export default function RegisterScreen() {
                             </View>
 
                             <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Alternative Phone (Optional)</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="080..."
+                                    keyboardType="phone-pad"
+                                    value={formData.alternative_phone_number}
+                                    onChangeText={(val) => setFormData({ ...formData, alternative_phone_number: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Nationality</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="e.g. Nigerian"
+                                    value={formData.nationality}
+                                    onChangeText={(val) => setFormData({ ...formData, nationality: val })}
+                                />
+                            </View>
+
+                            <View>
                                 <Text className="text-primary font-semibold mb-2 ml-1">State of Origin</Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
@@ -478,6 +591,26 @@ export default function RegisterScreen() {
                             </View>
 
                             <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">City</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="Enter city"
+                                    value={formData.city}
+                                    onChangeText={(val) => setFormData({ ...formData, city: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">State of Residence</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="Current state of residence"
+                                    value={formData.state_of_residence}
+                                    onChangeText={(val) => setFormData({ ...formData, state_of_residence: val })}
+                                />
+                            </View>
+
+                            <View>
                                 <Text className="text-primary font-semibold mb-2 ml-1">Residential Address</Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary pt-4"
@@ -486,6 +619,64 @@ export default function RegisterScreen() {
                                     style={{ height: 100, textAlignVertical: 'top' }}
                                     value={formData.residential_address}
                                     onChangeText={(val) => setFormData({ ...formData, residential_address: val })}
+                                />
+                            </View>
+
+                            {/* Guardian Information */}
+                            <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-6 mb-2">Guardian Information</Text>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Guardian Name</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="Full name"
+                                    value={formData.guardian_name}
+                                    onChangeText={(val) => setFormData({ ...formData, guardian_name: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Relationship</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="e.g. Father, Mother, Uncle"
+                                    value={formData.guardian_relationship}
+                                    onChangeText={(val) => setFormData({ ...formData, guardian_relationship: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Guardian Phone</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="080..."
+                                    keyboardType="phone-pad"
+                                    value={formData.guardian_phone}
+                                    onChangeText={(val) => setFormData({ ...formData, guardian_phone: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Guardian Email (Optional)</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                    placeholder="email@example.com"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    value={formData.guardian_email}
+                                    onChangeText={(val) => setFormData({ ...formData, guardian_email: val })}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-primary font-semibold mb-2 ml-1">Guardian Address</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary pt-4"
+                                    placeholder="Enter guardian's address"
+                                    multiline
+                                    style={{ height: 100, textAlignVertical: 'top' }}
+                                    value={formData.guardian_address}
+                                    onChangeText={(val) => setFormData({ ...formData, guardian_address: val })}
                                 />
                             </View>
                         </View>

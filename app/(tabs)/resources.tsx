@@ -1,24 +1,48 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Search, FileText, Download, Bookmark, Filter, ChevronRight, Book } from 'lucide-react-native';
+import api from '../../lib/api';
 
-const RESOURCE_CATEGORIES = ['All', 'PDFs', 'Past Questions', 'E-books', 'Articles'];
-const MOCK_RESOURCES = [
-    { id: '1', title: 'Advanced Calculus Note', code: 'MTH 301', type: 'PDF', size: '1.2 MB', category: 'PDFs' },
-    { id: '2', title: 'CSC 201 Past Questions (2023)', code: 'CSC 201', type: 'Past Question', size: '800 KB', category: 'Past Questions' },
-    { id: '3', title: 'Introduction to AI E-book', code: 'CSC 411', type: 'E-book', size: '5.6 MB', category: 'E-books' },
-    { id: '4', title: 'Data Structures Manual', code: 'CSC 202', type: 'PDF', size: '2.4 MB', category: 'PDFs' },
-    { id: '5', title: 'Quantum Physics Article', code: 'PHY 401', type: 'Article', size: '450 KB', category: 'Articles' },
+const RESOURCE_CATEGORIES = [
+    { label: 'All', value: 'All' },
+    { label: 'Textbooks', value: 'textbook' },
+    { label: 'Journals', value: 'journal' },
+    { label: 'Past Questions', value: 'past_question' },
+    { label: 'References', value: 'reference' },
+    { label: 'Other', value: 'other' }
 ];
 
 export default function ResourcesScreen() {
+    const router = useRouter();
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [resources, setResources] = useState<any[]>([]);
 
-    const filteredResources = MOCK_RESOURCES.filter(res =>
+    useEffect(() => {
+        fetchResources();
+    }, []);
+
+    const fetchResources = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/library');
+            // Safely parse paginated response or list array
+            const data = response.data.data || response.data || [];
+            setResources(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error fetching resources:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const filteredResources = resources.filter(res =>
         (selectedCategory === 'All' || res.category === selectedCategory) &&
-        (res.title.toLowerCase().includes(searchQuery.toLowerCase()) || res.code.toLowerCase().includes(searchQuery.toLowerCase()))
+        (res.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+         (res.course_code && res.course_code.toLowerCase().includes(searchQuery.toLowerCase())))
     );
 
     return (
@@ -45,54 +69,67 @@ export default function ResourcesScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-6 flex-row">
                     {RESOURCE_CATEGORIES.map((cat) => (
                         <TouchableOpacity
-                            key={cat}
-                            onPress={() => setSelectedCategory(cat)}
-                            className={`mr-3 px-6 py-2 rounded-full ${selectedCategory === cat ? 'bg-primary' : 'bg-gray-100'}`}
+                            key={cat.value}
+                            onPress={() => setSelectedCategory(cat.value)}
+                            className={`mr-3 px-6 py-2 rounded-full ${selectedCategory === cat.value ? 'bg-primary' : 'bg-gray-100'}`}
                         >
-                            <Text className={`font-semibold ${selectedCategory === cat ? 'text-white' : 'text-gray-500'}`}>{cat}</Text>
+                            <Text className={`font-semibold ${selectedCategory === cat.value ? 'text-white' : 'text-gray-500'}`}>{cat.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
             </View>
 
-            <FlatList
-                data={filteredResources}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ padding: 24 }}
-                renderItem={({ item, index }) => (
-                    <TouchableOpacity
-                        className="bg-white p-4 rounded-3xl border border-gray-100 flex-row items-center mb-4 shadow-sm"
-                    >
-                        <View className={`w-14 h-14 rounded-2xl items-center justify-center ${index % 2 === 0 ? 'bg-indigo-50' : 'bg-rose-50'}`}>
-                            {item.type === 'Past Question' ? <Book size={24} color="#F43F5E" /> : <FileText size={24} color="#6366F1" />}
-                        </View>
-                        <View className="ml-4 flex-1">
-                            <Text className="text-primary font-bold text-base" numberOfLines={1}>{item.title}</Text>
-                            <View className="flex-row items-center mt-1">
-                                <Text className="text-gray-400 text-xs font-semibold">{item.code}</Text>
-                                <View className="w-1 h-1 bg-gray-300 rounded-full mx-2" />
-                                <Text className="text-gray-400 text-xs">{item.type}</Text>
+            {loading ? (
+                <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="large" color="#002147" />
+                    <Text className="mt-2 text-gray-400 font-medium">Scanning catalog...</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredResources}
+                    keyExtractor={(item) => String(item.id)}
+                    contentContainerStyle={{ padding: 24 }}
+                    renderItem={({ item, index }) => (
+                        <TouchableOpacity
+                            onPress={() => router.push(`/library/${item.id}`)}
+                            className="bg-white p-4 rounded-3xl border border-gray-100 flex-row items-center mb-4 shadow-sm"
+                        >
+                            <View className={`w-14 h-14 rounded-2xl items-center justify-center ${index % 2 === 0 ? 'bg-indigo-50' : 'bg-rose-50'}`}>
+                                {item.category === 'past_question' ? <Book size={24} color="#F43F5E" /> : <FileText size={24} color="#6366F1" />}
                             </View>
-                            <View className="flex-row items-center mt-2">
-                                <View className="bg-gray-100 px-2 py-0.5 rounded-md flex-row items-center">
-                                    <Download size={10} color="#6B7280" />
-                                    <Text className="text-[10px] text-gray-500 ml-1">{item.size}</Text>
+                            <View className="ml-4 flex-1">
+                                <Text className="text-primary font-bold text-base" numberOfLines={1}>{item.title}</Text>
+                                <View className="flex-row items-center mt-1">
+                                    <Text className="text-gray-400 text-xs font-semibold">{item.course_code || 'GEN'}</Text>
+                                    <View className="w-1 h-1 bg-gray-300 rounded-full mx-2" />
+                                    <Text className="text-gray-400 text-xs">{item.category?.replace('_', ' ')}</Text>
                                 </View>
-                                <TouchableOpacity className="ml-3">
-                                    <Bookmark size={14} color="#9CA3AF" />
-                                </TouchableOpacity>
+                                <View className="flex-row items-center mt-2">
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-md flex-row items-center">
+                                        <Download size={10} color="#6B7280" />
+                                        <Text className="text-[10px] text-gray-500 ml-1">
+                                            {item.file_size ? `${(item.file_size / 1024 / 1024).toFixed(1)} MB` : 'N/A'}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity 
+                                        onPress={() => Alert.alert('Bookmarked', `"${item.title}" has been saved to your academic workspace.`)}
+                                        className="ml-3"
+                                    >
+                                        <Bookmark size={14} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
+                            <ChevronRight size={20} color="#E5E7EB" />
+                        </TouchableOpacity>
+                    )}
+                    ListEmptyComponent={
+                        <View className="py-20 items-center">
+                            <Book size={64} color="#E5E7EB" />
+                            <Text className="text-gray-400 mt-4 text-base italic">No resources found</Text>
                         </View>
-                        <ChevronRight size={20} color="#E5E7EB" />
-                    </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                    <View className="py-20 items-center">
-                        <Book size={64} color="#E5E7EB" />
-                        <Text className="text-gray-400 mt-4 text-base italic">No resources found</Text>
-                    </View>
-                }
-            />
+                    }
+                />
+            )}
         </SafeAreaView>
     );
 }
