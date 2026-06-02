@@ -269,6 +269,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // School Information (Consolidated)
     Route::get('/school/info', [\App\Http\Controllers\SchoolInfoController::class, 'getSchoolInfo']);
     Route::put('/school/info', [\App\Http\Controllers\SchoolInfoController::class, 'updateSchoolInfo']); // Admin
+    
+    // App Developers / About Us Routes
+    Route::get('/about-us', [\App\Http\Controllers\AppDeveloperController::class, 'index']);
+    Route::post('/admin/about-us', [\App\Http\Controllers\AppDeveloperController::class, 'store']);
+    Route::put('/admin/about-us/{id}', [\App\Http\Controllers\AppDeveloperController::class, 'update']);
+    Route::delete('/admin/about-us/{id}', [\App\Http\Controllers\AppDeveloperController::class, 'destroy']);
+
     Route::get('/school/rules', [\App\Http\Controllers\SchoolInfoController::class, 'getRules']);
     Route::post('/school/rules', [\App\Http\Controllers\SchoolInfoController::class, 'storeRule']); // Admin
     Route::put('/school/rules/{id}', [\App\Http\Controllers\SchoolInfoController::class, 'updateRule']); // Admin
