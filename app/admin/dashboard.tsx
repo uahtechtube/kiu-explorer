@@ -92,6 +92,7 @@ export default function AdminDashboard() {
         { label: 'Moderation', sub: 'Reports Watch', icon: AlertTriangle, color: '#EF4444', route: '/admin/moderation', permission: 'approve_content' },
         { label: 'System Health', sub: 'Monitoring', icon: Activity, color: '#10B981', route: '/admin/system', permission: 'view_analytics' },
         { label: 'Staff Directory', sub: 'Faculty Members', icon: Users, color: '#8B5CF6', route: '/admin/staff', permission: 'manage_users' },
+        { label: 'App Developers', sub: 'Dev Team CRUD', icon: Users, color: '#F97316', route: '/admin/about-us', permission: 'manage_users' },
         { label: 'Campus Map', sub: 'Map Locations', icon: MapPin, color: '#06B6D4', route: '/admin/map', permission: 'manage_hostels' },
         { label: 'Academic Portals', sub: 'Structure CRUD', icon: Network, color: '#8B5CF6', route: '/admin/academic', permission: 'manage_users' },
         { label: 'School Info', sub: 'Update Details', icon: House, color: '#10B981', route: '/admin/school-info', permission: 'manage_users' },

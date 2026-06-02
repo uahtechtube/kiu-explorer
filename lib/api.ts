@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
 // To find your IP: Run 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux)
 // Look for IPv4 Address under your active network adapter (e.g., 192.168.1.10)
 
-const YOUR_COMPUTER_IP = '192.168.183.249'; // UPDATE THIS with your actual IP if different
+const YOUR_COMPUTER_IP = '192.168.99.249'; // UPDATE THIS with your actual IP if different
 
 const getBaseUrl = () => {
     if (Platform.OS === 'web') {

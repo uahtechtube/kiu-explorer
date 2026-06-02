@@ -23,6 +23,89 @@ const quickActions = [
     { id: 3, label: 'Solve Math', icon: Calculator, color: '#10B981' },
 ];
 
+interface FormattedTextProps {
+    text: string;
+    isUser: boolean;
+}
+
+const FormattedText: React.FC<FormattedTextProps> = ({ text, isUser }) => {
+    if (isUser) {
+        return (
+            <Text className="text-white text-base leading-6 font-medium">
+                {text}
+            </Text>
+        );
+    }
+
+    const lines = text.split('\n');
+
+    return (
+        <View className="flex-col">
+            {lines.map((line, lineIdx) => {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    return <View key={lineIdx} className="h-2" />;
+                }
+
+                const isBullet = trimmed.startsWith('•') || trimmed.startsWith('* ') || trimmed.startsWith('- ');
+                let bulletText = trimmed;
+                if (isBullet) {
+                    bulletText = trimmed.replace(/^(•|\*|-)\s*/, '');
+                }
+
+                const parseInline = (rawText: string) => {
+                    const regex = /(\*\*.*?\*\*|`.*?`)/g;
+                    const parts = rawText.split(regex);
+
+                    return parts.map((part, partIdx) => {
+                        if (part.startsWith('**') && part.endsWith('**')) {
+                            const boldVal = part.slice(2, -2);
+                            return (
+                                <Text key={partIdx} className="font-extrabold text-[#002147] text-base">
+                                    {boldVal}
+                                </Text>
+                            );
+                        } else if (part.startsWith('`') && part.endsWith('`')) {
+                            const codeVal = part.slice(1, -1);
+                            return (
+                                <Text
+                                    key={partIdx}
+                                    style={{ fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}
+                                    className="bg-gray-100 text-rose-600 px-1 py-0.5 rounded text-sm font-bold"
+                                >
+                                    {codeVal}
+                                </Text>
+                            );
+                        }
+                        return (
+                            <Text key={partIdx} className="text-gray-700 text-base leading-6">
+                                {part}
+                            </Text>
+                        );
+                    });
+                };
+
+                if (isBullet) {
+                    return (
+                        <View key={lineIdx} className="flex-row items-start pl-2 mb-1.5">
+                            <Text className="text-primary font-black text-base mr-2 mt-0.5">•</Text>
+                            <Text className="flex-1 text-gray-700 text-base leading-6">
+                                {parseInline(bulletText)}
+                            </Text>
+                        </View>
+                    );
+                }
+
+                return (
+                    <Text key={lineIdx} className="text-gray-700 text-base leading-6 mb-1.5">
+                        {parseInline(trimmed)}
+                    </Text>
+                );
+            })}
+        </View>
+    );
+};
+
 export default function AIAssistantPage() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -30,7 +113,7 @@ export default function AIAssistantPage() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
-            text: "Hello! I'm your AI Study Assistant. I can help you with:\n\n• Explaining difficult topics\n• Solving homework problems\n• Summarizing notes\n• Preparing for exams\n\nHow can I help you today?",
+            text: "Hello! I'm Gutti AI, your AI Study Assistant. I can help you with:\n\n• Explaining difficult topics\n• Solving homework problems\n• Summarizing notes\n• Preparing for exams\n\nHow can I help you today?",
             isUser: false,
             timestamp: new Date(),
         },
@@ -180,7 +263,7 @@ export default function AIAssistantPage() {
                         <Sparkles size={24} color="#002147" />
                     </View>
                     <View className="flex-1">
-                        <Text className="text-white text-xl font-bold">AI Study Assistant</Text>
+                        <Text className="text-white text-xl font-bold">Gutti AI</Text>
                         <Text className="text-gray-300 text-xs">Always here to help</Text>
                     </View>
                 </View>
@@ -200,22 +283,27 @@ export default function AIAssistantPage() {
                     {messages.map((message) => (
                         <View
                             key={message.id}
-                            className={`mb-4 ${message.isUser ? 'items-end' : 'items-start'}`}
+                            className={`mb-5 ${message.isUser ? 'items-end' : 'items-start'}`}
                         >
+                            {!message.isUser && (
+                                <View className="flex-row items-center mb-1.5 ml-2">
+                                    <View className="w-5 h-5 bg-secondary rounded-full items-center justify-center mr-1.5 shadow-sm">
+                                        <Sparkles size={10} color="#002147" />
+                                    </View>
+                                    <Text className="text-primary font-black text-[10px] uppercase tracking-widest">
+                                        Gutti AI
+                                    </Text>
+                                </View>
+                            )}
                             <View
-                                className={`max-w-[80%] p-4 rounded-3xl ${message.isUser
-                                    ? 'bg-primary rounded-br-sm'
-                                    : 'bg-white border border-gray-200 rounded-bl-sm'
+                                className={`max-w-[85%] p-5 rounded-[28px] shadow-sm ${message.isUser
+                                    ? 'bg-primary rounded-br-sm shadow-primary/10'
+                                    : 'bg-white border border-slate-100 rounded-bl-sm shadow-slate-100/50'
                                     }`}
                             >
+                                <FormattedText text={message.text} isUser={message.isUser} />
                                 <Text
-                                    className={`text-base leading-6 ${message.isUser ? 'text-white' : 'text-gray-800'
-                                        }`}
-                                >
-                                    {message.text}
-                                </Text>
-                                <Text
-                                    className={`text-xs mt-2 ${message.isUser ? 'text-gray-300' : 'text-gray-400'
+                                    className={`text-[10px] mt-2 font-bold ${message.isUser ? 'text-white/60' : 'text-slate-400'
                                         }`}
                                 >
                                     {formatTime(message.timestamp)}
