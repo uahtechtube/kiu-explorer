@@ -121,6 +121,26 @@ class User extends Authenticatable
         return $this->hasOne(StudentProfile::class);
     }
 
+    public function shop()
+    {
+        return $this->hasOne(Shop::class);
+    }
+
+    public function aiConversations()
+    {
+        return $this->hasMany(AiConversation::class);
+    }
+
+    public function gpaEntries()
+    {
+        return $this->hasMany(GpaEntry::class);
+    }
+
+    public function vaultDocuments()
+    {
+        return $this->hasMany(VaultDocument::class);
+    }
+
     public function roommateProfile()
     {
         return $this->hasOne(HostelRoommateProfile::class, 'student_id');

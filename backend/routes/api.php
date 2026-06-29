@@ -96,6 +96,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/support', [\App\Http\Controllers\SupportController::class, 'index']);
     Route::post('/support/tickets', [\App\Http\Controllers\SupportController::class, 'store']);
 
+    // Lost and Found
+    Route::apiResource('lost-items', \App\Http\Controllers\LostItemController::class);
+    Route::post('lost-items/{id}/comments', [\App\Http\Controllers\LostItemController::class, 'addComment']);
+    Route::delete('lost-items/comments/{id}', [\App\Http\Controllers\LostItemController::class, 'deleteComment']);
+    Route::patch('lost-items/{id}/status', [\App\Http\Controllers\LostItemController::class, 'toggleStatus']);
+    Route::get('admin/lost-items', [\App\Http\Controllers\LostItemController::class, 'adminIndex']);
+
     // Student-Specific Routes (Consolidated)
     Route::prefix('student')->group(function () {
         // Search
@@ -166,6 +173,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/announcements', [\App\Http\Controllers\AnnouncementController::class, 'index']);
         Route::get('/announcements/{id}', [\App\Http\Controllers\AnnouncementController::class, 'show']);
 
+        // Adverts
+        Route::get('/adverts', [\App\Http\Controllers\AdvertController::class, 'index']);
+        Route::get('/adverts/{id}', [\App\Http\Controllers\AdvertController::class, 'show']);
+
         // Social Hub (Added to match frontend)
         Route::get('/posts', [\App\Http\Controllers\SocialController::class, 'index']);
         Route::post('/posts/{id}/like', [\App\Http\Controllers\SocialController::class, 'like']);
@@ -192,6 +203,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Hostel Rules dynamic view
         Route::get('/hostels/{id}/rules', [\App\Http\Controllers\HostelRuleController::class, 'index']);
+
+        // Hostel Heads — public/student view
+        Route::get('/hostel-heads', [\App\Http\Controllers\HostelHeadController::class, 'publicIndex']);
+        Route::get('/hostel-heads/{hostelId}', [\App\Http\Controllers\HostelHeadController::class, 'publicShow']);
 
         // Hostel Attendance routes
         Route::get('/hostels/attendance', [\App\Http\Controllers\HostelAttendanceController::class, 'history']);
@@ -310,6 +325,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/documents/{id}/download', [\App\Http\Controllers\DocumentController::class, 'download']);
     Route::post('/documents/{id}/verify', [\App\Http\Controllers\DocumentController::class, 'verify']); // Admin
     Route::delete('/documents/{id}', [\App\Http\Controllers\DocumentController::class, 'destroy']);
+
+    // Smart GPA Calculator
+    Route::get('/student/gpa', [\App\Http\Controllers\GpaController::class, 'index']);
+    Route::get('/student/gpa/summary', [\App\Http\Controllers\GpaController::class, 'summary']);
+    Route::post('/student/gpa', [\App\Http\Controllers\GpaController::class, 'store']);
+    Route::put('/student/gpa/{id}', [\App\Http\Controllers\GpaController::class, 'update']);
+    Route::delete('/student/gpa/{id}', [\App\Http\Controllers\GpaController::class, 'destroy']);
+
+    // Secure Document Vault
+    Route::get('/student/vault', [\App\Http\Controllers\VaultDocumentController::class, 'index']);
+    Route::post('/student/vault', [\App\Http\Controllers\VaultDocumentController::class, 'store']);
+    Route::put('/student/vault/{id}', [\App\Http\Controllers\VaultDocumentController::class, 'update']);
+    Route::delete('/student/vault/{id}', [\App\Http\Controllers\VaultDocumentController::class, 'destroy']);
+    Route::get('/student/vault/{id}/download', [\App\Http\Controllers\VaultDocumentController::class, 'download']);
+    Route::post('/student/vault/verify-password', [\App\Http\Controllers\VaultDocumentController::class, 'verifyPassword']);
 
     // Assignments
     Route::get('/assignments', [\App\Http\Controllers\AssignmentController::class, 'index']);
@@ -578,6 +608,22 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::patch('/complaints/{id}', [\App\Http\Controllers\AdminHostelController::class, 'updateComplaintStatus']);
         });
 
+        // Admin Hostel Heads (Wardens) CRUD
+        Route::prefix('hostel-heads')->group(function () {
+            Route::get('/', [\App\Http\Controllers\HostelHeadController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\HostelHeadController::class, 'store']);
+            Route::put('/{id}', [\App\Http\Controllers\HostelHeadController::class, 'update']);
+            Route::delete('/{id}', [\App\Http\Controllers\HostelHeadController::class, 'destroy']);
+        });
+
+        // Admin Adverts Management
+        Route::prefix('adverts')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AdvertController::class, 'adminIndex']);
+            Route::post('/', [\App\Http\Controllers\AdvertController::class, 'store']);
+            Route::match(['post', 'put'], '/{id}', [\App\Http\Controllers\AdvertController::class, 'update']); // Allow both POST and PUT with multipart form-data for updates
+            Route::delete('/{id}', [\App\Http\Controllers\AdvertController::class, 'destroy']);
+        });
+
         // Admin Finance / Payments
         Route::prefix('finance')->group(function () {
             Route::get('/payments', [\App\Http\Controllers\AdminPaymentController::class, 'index']);
@@ -587,8 +633,41 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // AI Study Assistant
     Route::prefix('student/ai-assistant')->group(function () {
+        Route::get('/history', [\App\Http\Controllers\AIController::class, 'getHistory']);
+        Route::get('/history/{id}', [\App\Http\Controllers\AIController::class, 'getConversationMessages']);
+        Route::post('/history', [\App\Http\Controllers\AIController::class, 'startConversation']);
+        Route::delete('/history/{id}', [\App\Http\Controllers\AIController::class, 'destroyConversation']);
         Route::post('/chat', [\App\Http\Controllers\AIController::class, 'chat']);
         Route::get('/topics', [\App\Http\Controllers\AIController::class, 'topics']);
+    });
+
+    // Student Marketplace E-commerce Routes
+    Route::prefix('marketplace')->group(function () {
+        Route::get('/shops', [\App\Http\Controllers\MarketplaceController::class, 'indexShops']);
+        Route::get('/my-shop', [\App\Http\Controllers\MarketplaceController::class, 'myShop']);
+        Route::post('/shops', [\App\Http\Controllers\MarketplaceController::class, 'storeShop']);
+        Route::put('/shops/{id}', [\App\Http\Controllers\MarketplaceController::class, 'updateShop']);
+        Route::delete('/shops/{id}', [\App\Http\Controllers\MarketplaceController::class, 'destroyShop']);
+        Route::get('/products', [\App\Http\Controllers\MarketplaceController::class, 'indexProducts']);
+        Route::get('/products/{id}', [\App\Http\Controllers\MarketplaceController::class, 'showProduct']);
+        Route::post('/products', [\App\Http\Controllers\MarketplaceController::class, 'storeProduct']);
+        Route::put('/products/{id}', [\App\Http\Controllers\MarketplaceController::class, 'updateProduct']);
+        Route::delete('/products/{id}', [\App\Http\Controllers\MarketplaceController::class, 'destroyProduct']);
+        
+        // Reviews
+        Route::get('/products/{id}/reviews', [\App\Http\Controllers\MarketplaceController::class, 'getReviews']);
+        Route::post('/products/{id}/reviews', [\App\Http\Controllers\MarketplaceController::class, 'storeReview']);
+        Route::delete('/products/reviews/{id}', [\App\Http\Controllers\MarketplaceController::class, 'destroyReview']);
+    });
+
+    // Admin Marketplace Moderation Routes
+    Route::prefix('admin/marketplace')->group(function () {
+        Route::get('/shops', [\App\Http\Controllers\MarketplaceController::class, 'adminIndexShops']);
+        Route::patch('/shops/{id}/status', [\App\Http\Controllers\MarketplaceController::class, 'adminUpdateShopStatus']);
+        Route::delete('/shops/{id}', [\App\Http\Controllers\MarketplaceController::class, 'adminDestroyShop']);
+        Route::get('/products', [\App\Http\Controllers\MarketplaceController::class, 'adminIndexProducts']);
+        Route::patch('/products/{id}/status', [\App\Http\Controllers\MarketplaceController::class, 'adminUpdateProductStatus']);
+        Route::delete('/products/{id}', [\App\Http\Controllers\MarketplaceController::class, 'adminDestroyProduct']);
     });
 });
 

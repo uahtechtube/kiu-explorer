@@ -10,18 +10,18 @@ class HostelRuleController extends Controller
 {
     public function index(Request $request, $hostelId)
     {
-        $hostel = Hostel::findOrFail($hostelId);
         $user = $request->user();
 
         $query = HostelRule::where('hostel_id', $hostelId);
 
-        if ($user->role === 'student') {
+        // Students only see active rules
+        if ($user && $user->role === 'student') {
             $query->where('is_active', true);
         }
 
         return response()->json([
             'status' => 'success',
-            'data' => $query->get()
+            'data' => $query->orderBy('created_at', 'asc')->get()
         ]);
     }
 

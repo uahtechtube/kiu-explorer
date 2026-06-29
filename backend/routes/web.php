@@ -2,10 +2,37 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\BlogPostController;
+use App\Http\Controllers\GalleryController;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Public Landing Page and Download Routes
+Route::get('/', [LandingPageController::class, 'index'])->name('landing');
+Route::get('/download-apk/track', [LandingPageController::class, 'trackDownload'])->name('download.track');
+Route::get('/download-apk/mock', [LandingPageController::class, 'downloadMockApk'])->name('download.mock');
+
+// Public Blog & Gallery Routes
+Route::get('/blog', [BlogPostController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [BlogPostController::class, 'show'])->name('blog.show');
+Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+
+// CMS Authentication and Dashboard Routes
+Route::get('/cms/login', [LandingPageController::class, 'cmsLoginView'])->name('cms.login');
+Route::post('/cms/login', [LandingPageController::class, 'cmsLogin']);
+Route::get('/cms/dashboard', [LandingPageController::class, 'cmsDashboard'])->name('cms.dashboard');
+Route::post('/cms/settings/update', [LandingPageController::class, 'cmsUpdate'])->name('cms.update');
+Route::post('/cms/profile/password', [LandingPageController::class, 'cmsUpdatePassword'])->name('cms.password.update');
+Route::post('/cms/admins/create', [LandingPageController::class, 'cmsCreateAdmin'])->name('cms.admin.create');
+Route::post('/cms/logout', [LandingPageController::class, 'cmsLogout'])->name('cms.logout');
+
+// CMS Blog Management Routes
+Route::post('/cms/blog', [BlogPostController::class, 'store'])->name('cms.blog.store');
+Route::post('/cms/blog/{id}/update', [BlogPostController::class, 'update'])->name('cms.blog.update');
+Route::post('/cms/blog/{id}/delete', [BlogPostController::class, 'destroy'])->name('cms.blog.destroy');
+
+// CMS Gallery Management Routes
+Route::post('/cms/gallery', [GalleryController::class, 'store'])->name('cms.gallery.store');
+Route::post('/cms/gallery/{id}/delete', [GalleryController::class, 'destroy'])->name('cms.gallery.destroy');
 
 // Paystack Sandbox Checkout Simulator Page
 Route::get('/payments/gateway', function (Request $request) {

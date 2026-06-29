@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         // Call the MasterSeeder which has all the correct data
         $this->call([
             MasterSeeder::class,
+            LandingPageSettingSeeder::class,
         ]);
     }
 }

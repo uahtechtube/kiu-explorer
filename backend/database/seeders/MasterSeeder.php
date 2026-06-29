@@ -254,6 +254,10 @@ class MasterSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        // 13. Lost Items
+        $this->call(LostItemSeeder::class);
+        $this->command->info('Lost & Found Seeded.');
+
         $this->command->info('Master Seeding Finished Successfully!');
     }
 }
