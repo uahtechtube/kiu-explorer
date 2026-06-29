@@ -78,6 +78,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     async function loadStorageData() {
         try {
+            // Start a 2-second delay timer so the user can read the welcome page branding
+            const welcomeTimer = new Promise(resolve => setTimeout(resolve, 2000));
+
             const storedToken = await storage.getItem('token');
             const storedUser = await storage.getItem('user');
 
@@ -85,6 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setToken(storedToken);
                 setUser(JSON.parse(storedUser));
             }
+
+            // Wait until the 2-second welcome timer has expired
+            await welcomeTimer;
         } catch (e) {
             console.error('Failed to load auth data', e);
         } finally {

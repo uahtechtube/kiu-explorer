@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Users, BookOpen, AlertTriangle, TrendingUp, Settings, Shield, FileText, MessageSquare, Activity, ChevronRight, Bell, Zap, ClipboardList, Lock, Monitor, Megaphone, Home as House, LogOut, DollarSign, MapPin, Network } from 'lucide-react-native';
+import { Users, BookOpen, AlertTriangle, TrendingUp, Settings, Shield, FileText, MessageSquare, Activity, ChevronRight, Bell, Zap, ClipboardList, Lock, Monitor, Megaphone, Home as House, LogOut, DollarSign, MapPin, Network, Store } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
@@ -83,6 +83,8 @@ export default function AdminDashboard() {
 
     const functionalModules = [
         { label: 'Courses', sub: 'Curriculum', icon: BookOpen, color: '#3B82F6', route: '/admin/courses', permission: 'manage_courses' },
+        { label: 'Adverts', sub: 'Campus Ads', icon: Megaphone, color: '#EC4899', route: '/admin/adverts', permission: 'manage_courses' },
+        { label: 'Marketplace', sub: 'Shops & Products', icon: Store, color: '#EC4899', route: '/admin/marketplace', permission: 'manage_users' },
         { label: 'Associations', sub: 'Clubs & Feeds', icon: Users, color: '#8B5CF6', route: '/admin/associations', permission: 'manage_users' },
         { label: 'Approvals', sub: 'Moderation', icon: Shield, color: '#EF4444', route: '/admin/approvals', permission: 'approve_content' },
         { label: 'E-Classroom', sub: 'Live Classes', icon: Monitor, color: '#F59E0B', route: '/admin/classes', permission: 'manage_classes' },
@@ -90,6 +92,7 @@ export default function AdminDashboard() {
         { label: 'Hostel Admin', sub: 'Accommodation', icon: House, color: '#3B82F6', route: '/admin/hostels', permission: 'manage_hostels' },
         { label: 'Finance', sub: 'Payments', icon: DollarSign, color: '#10B981', route: '/admin/finance/payments', permission: 'manage_finance' },
         { label: 'Moderation', sub: 'Reports Watch', icon: AlertTriangle, color: '#EF4444', route: '/admin/moderation', permission: 'approve_content' },
+        { label: 'Lost & Found', sub: 'Items Watch', icon: ClipboardList, color: '#EC4899', route: '/admin/lost-found', permission: 'approve_content' },
         { label: 'System Health', sub: 'Monitoring', icon: Activity, color: '#10B981', route: '/admin/system', permission: 'view_analytics' },
         { label: 'Staff Directory', sub: 'Faculty Members', icon: Users, color: '#8B5CF6', route: '/admin/staff', permission: 'manage_users' },
         { label: 'App Developers', sub: 'Dev Team CRUD', icon: Users, color: '#F97316', route: '/admin/about-us', permission: 'manage_users' },

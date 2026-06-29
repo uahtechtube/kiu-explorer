@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { BookOpen, Video, Users, Bell, Search, GraduationCap, ArrowRight, Home } from 'lucide-react-native';
+import { BookOpen, Video, Users, Bell, Search, GraduationCap, ArrowRight, Home, Store, Calculator, Lock } from 'lucide-react-native';
 import api from '../../lib/api';
 
 interface DashboardData {
@@ -53,11 +53,48 @@ export default function StudentDashboard() {
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [adverts, setAdverts] = useState<any[]>([]);
+
+  const { width: screenWidth } = Dimensions.get('window');
+  const cardWidth = screenWidth - 48; // px-6 on left and right = 48
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [activeAdIndex, setActiveAdIndex] = useState(0);
+
+  // Auto scroll effect
+  useEffect(() => {
+    if (adverts.length <= 1) return;
+    const interval = setInterval(() => {
+      const nextIndex = (activeAdIndex + 1) % adverts.length;
+      setActiveAdIndex(nextIndex);
+      scrollViewRef.current?.scrollTo({
+        x: nextIndex * cardWidth,
+        animated: true,
+      });
+    }, 4000); // Auto-scroll every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [activeAdIndex, adverts.length, cardWidth]);
+
+  const handleScroll = (event: any) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / cardWidth);
+    setActiveAdIndex(index);
+  };
+
+  const fetchAdverts = async () => {
+    try {
+      const response = await api.get('/student/adverts');
+      setAdverts(response.data);
+    } catch (error) {
+      console.error('Error fetching adverts:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
       const response = await api.get('/student/dashboard');
       setDashboardData(response.data);
+      fetchAdverts();
     } catch (error) {
       console.error('Error fetching dashboard data', error);
     }
@@ -143,32 +180,65 @@ export default function StudentDashboard() {
           ))}
         </View>
 
-        {/* Announcements Preview */}
-        {dashboardData && dashboardData.announcements && dashboardData.announcements.length > 0 && (
-          <View className="px-6 mt-8">
+        {/* Adverts Showcase Slider */}
+        {adverts.length > 0 && (
+          <View className="px-6 mt-6">
             <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-primary text-xl font-bold">Latest News</Text>
-              <TouchableOpacity onPress={() => router.push('/announcements')}>
-                <Text className="text-blue-500 text-sm">See All</Text>
-              </TouchableOpacity>
+              <Text className="text-primary text-xl font-bold">Featured Updates</Text>
+              <View className="bg-rose-500/10 px-3 py-1 rounded-xl">
+                <Text className="text-rose-600 text-[10px] font-black uppercase tracking-wider">Campus Ads</Text>
+              </View>
             </View>
-            {dashboardData.announcements.map((ann) => (
-              <TouchableOpacity
-                key={ann.id}
-                onPress={() => router.push(`/announcements/${ann.id}` as any)}
-                className="bg-white p-4 rounded-3xl mb-3 flex-row items-center border border-gray-100 shadow-sm"
-              >
-                <View className="w-12 h-12 bg-blue-50 rounded-2xl items-center justify-center mr-4">
-                  <Bell size={20} color="#3B82F6" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-primary font-bold text-sm" numberOfLines={1}>{ann.title}</Text>
-                  <Text className="text-gray-400 text-xs mt-1" numberOfLines={1}>{ann.extract}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleScroll}
+              style={{ width: cardWidth }}
+            >
+              {adverts.map((ad) => (
+                <TouchableOpacity
+                  key={ad.id}
+                  onPress={() => router.push(`/adverts/${ad.id}` as any)}
+                  style={{ width: cardWidth }}
+                  className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden h-44 relative"
+                >
+                  {/* Media background or overlay */}
+                  {ad.media_type === 'image' && ad.full_media_url ? (
+                    <Image
+                      source={{ uri: ad.full_media_url }}
+                      className="absolute inset-0 w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : ad.media_type === 'video' && ad.full_media_url ? (
+                    <View className="absolute inset-0 bg-slate-900 justify-center items-center">
+                      <Text className="text-white/40 text-xs font-bold mb-2">Video Circular</Text>
+                      {/* Play video overlay icon */}
+                      <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center border border-white/30">
+                        <Video size={24} color="white" />
+                      </View>
+                    </View>
+                  ) : (
+                    <View className="absolute inset-0 bg-gradient-to-tr from-indigo-900/20 via-purple-900/20 to-blue-900/10" />
+                  )}
+
+                  {/* Dark text overlay gradient for premium readability */}
+                  <View className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent p-5 justify-end items-center">
+                    <Text className="text-white font-extrabold text-base mb-1 text-center" numberOfLines={1}>
+                      {ad.title}
+                    </Text>
+                    <Text className="text-white/80 text-xs font-semibold text-center" numberOfLines={2}>
+                      {ad.content}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
+
+
 
         {/* Upcoming Classes */}
         {dashboardData && dashboardData.upcoming_classes && dashboardData.upcoming_classes.length > 0 && (
@@ -286,10 +356,13 @@ export default function StudentDashboard() {
               { label: 'Staff Directory', icon: Users, color: '#F97316', route: '/school/staff' },
               { label: 'Calendar', icon: BookOpen, color: '#EC4899', route: '/school/calendar' },
               { label: 'Hostels', icon: Home, color: '#3B82F6', route: '/hostels' },
+              { label: 'Marketplace', icon: Store, color: '#EC4899', route: '/marketplace' },
+              { label: 'Lost & Found', icon: Search, color: '#F59E0B', route: '/school/lost-found' },
               { label: 'School Info', icon: BookOpen, color: '#6366F1', route: '/school/info' },
+              { label: 'GPA Calculator', icon: Calculator, color: '#10B981', route: '/school/gpa-calculator' },
+              { label: 'Secure Vault', icon: Lock, color: '#8B5CF6', route: '/school/document-vault' },
               { label: 'About Devs', icon: Users, color: '#F97316', route: '/school/about-us' },
               { label: 'Notifications', icon: Bell, color: '#EF4444', route: '/notifications' },
-              { label: 'Payments', icon: GraduationCap, color: '#F59E0B', route: '/payments' },
               { label: 'Search', icon: Search, color: '#64748B', route: '/search' },
             ].map((feature, i) => (
               <TouchableOpacity

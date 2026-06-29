@@ -16,8 +16,9 @@ interface Complaint {
     status: 'pending' | 'assigned' | 'in_progress' | 'resolved' | 'closed';
     admin_comment?: string;
     student: { name: string; matric_number: string };
-    hostel: { name: string };
-    room: { room_number: string };
+    hostel?: { name: string } | null;
+    room?: { room_number: string } | null;
+    room_number?: string | null;
 }
 
 const STATUS_META: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
@@ -118,7 +119,7 @@ export default function AdminComplaints() {
                                 <Text className="text-primary font-bold text-base mb-1">{item.title}</Text>
                                 <Text className="text-gray-500 text-sm leading-5 mb-2">{item.description}</Text>
                                 <Text className="text-gray-400 text-[10px] font-semibold">
-                                    {item.student?.name ?? '—'}  •  Room {item.room?.room_number} ({item.hostel?.name})
+                                    {item.student?.name ?? '—'}  •  {item.hostel?.name ? item.hostel.name : 'General Hostel/Campus Area'}{item.room_number || item.room?.room_number ? ` - Room ${item.room_number || item.room?.room_number}` : ''}
                                 </Text>
 
                                 {/* Existing admin feedback */}

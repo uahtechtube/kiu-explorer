@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Home as House, ClipboardList, Hammer, ChevronRight, Settings, Plus, Users, FileText, BarChart3, DollarSign } from 'lucide-react-native';
+import { ChevronLeft, Home as House, ClipboardList, Hammer, ChevronRight, Settings, Plus, Users, FileText, BarChart3, DollarSign, UserCheck } from 'lucide-react-native';
 import api from '../../../lib/api';
 
 interface Stats {
@@ -54,42 +54,6 @@ export default function HostelAdminPortal() {
 
     const menuItems = [
         {
-            title: 'Oversight & Analytics',
-            sub: 'System statistics and occupancy rates',
-            icon: BarChart3,
-            color: '#8B5CF6',
-            route: '/admin/dashboard/hostel-stats',
-        },
-        {
-            title: 'Booking Requests',
-            sub: 'Approve or reject room applications',
-            icon: ClipboardList,
-            color: '#3B82F6',
-            route: '/admin/hostels/bookings',
-            count: stats ? (stats.pending_bookings > 0 ? `${stats.pending_bookings} Pending` : null) : '...',
-        },
-        {
-            title: 'Hostel Booking Payments',
-            sub: 'Track paid & unpaid hostel bookings',
-            icon: DollarSign,
-            color: '#10B981',
-            route: '/admin/hostels/payments',
-        },
-        {
-            title: 'Leaves & Gate Passes',
-            sub: 'Review and approve student leaves',
-            icon: FileText,
-            color: '#14B8A6',
-            route: '/admin/hostels/leaves',
-        },
-        {
-            title: 'Security Visitors Log',
-            sub: 'Gate check-in / check-out visitor records',
-            icon: Users,
-            color: '#F59E0B',
-            route: '/admin/hostels/visitors',
-        },
-        {
             title: 'Maintenance Log',
             sub: 'Manage repairs and complaints',
             icon: Hammer,
@@ -98,19 +62,18 @@ export default function HostelAdminPortal() {
             count: stats ? (stats.active_complaints > 0 ? `${stats.active_complaints} Active` : null) : '...',
         },
         {
-            title: 'Manage Hostels',
-            sub: 'Add/Edit hostels, rooms & beds map',
-            icon: House,
-            color: '#06B6D4',
-            route: '/admin/hostels/manage',
-            count: stats ? `${stats.available_rooms}/${stats.total_rooms} Available` : null,
-        },
-        {
             title: 'Guidelines & Rules',
             sub: 'Enforce codes of conduct and rules',
             icon: Settings,
             color: '#64748B',
             route: '/admin/hostels/rules',
+        },
+        {
+            title: 'Hostel Heads',
+            sub: 'Manage wardens & hall masters',
+            icon: UserCheck,
+            color: '#8B5CF6',
+            route: '/admin/hostels/heads',
         },
     ];
 
@@ -128,21 +91,13 @@ export default function HostelAdminPortal() {
                 <View className="bg-primary/5 p-6 rounded-[32px] mb-8 border border-primary/10">
                     <Text className="text-primary font-bold text-lg mb-1">Administrative Overview</Text>
                     <Text className="text-slate-500 text-xs mb-5">
-                        Manage all campus accommodation facilities and student requests.
+                        Manage all hostel regulations, codes of conduct, and student maintenance requests.
                     </Text>
                     {stats && (
                         <View className="flex-row justify-between">
-                             <View className="items-center bg-white rounded-2xl px-4 py-3 flex-1 mr-2 shadow-sm border border-gray-50">
-                                <Text className="text-2xl font-bold text-blue-600">{stats.pending_bookings}</Text>
-                                <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Pending</Text>
-                            </View>
-                            <View className="items-center bg-white rounded-2xl px-4 py-3 flex-1 mr-2 shadow-sm border border-gray-50">
-                                <Text className="text-2xl font-bold text-amber-500">{stats.active_complaints}</Text>
-                                <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Issues</Text>
-                            </View>
-                            <View className="items-center bg-white rounded-2xl px-4 py-3 flex-1 shadow-sm border border-gray-50">
-                                <Text className="text-2xl font-bold text-green-600">{stats.available_rooms}</Text>
-                                <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Free Rooms</Text>
+                            <View className="items-center bg-white rounded-2xl px-4 py-4 flex-1 shadow-sm border border-gray-50">
+                                <Text className="text-3xl font-black text-amber-500">{stats.active_complaints}</Text>
+                                <Text className="text-gray-400 text-[10px] font-bold uppercase mt-1">Active Complaints</Text>
                             </View>
                         </View>
                     )}
@@ -173,48 +128,6 @@ export default function HostelAdminPortal() {
                             <ChevronRight size={20} color="#E2E8F0" />
                         </TouchableOpacity>
                     ))}
-                </View>
-
-                <TouchableOpacity
-                    onPress={() => router.push('/admin/hostels/manage' as any)}
-                    className="mt-4 bg-blue-50 py-5 rounded-[28px] items-center flex-row justify-center border border-dashed border-primary mb-6"
-                >
-                    <Plus size={20} color="#3B82F6" />
-                    <Text className="text-blue-600 font-bold ml-2">Quick Add New Hostel</Text>
-                </TouchableOpacity>
-
-                {/* Financial Parameter: Hostel Service Charge Card */}
-                <View className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm mb-16">
-                    <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-2">
-                        Hostel Service Charge (Levy)
-                    </Text>
-                    <Text className="text-gray-500 text-xs mb-4">
-                        Define the administrative service fee automatically added to all student hostel booking payments.
-                    </Text>
-                    <View className="flex-row items-center">
-                        <View className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 flex-row items-center mr-3">
-                            <Text className="text-primary font-bold text-base mr-1">₦</Text>
-                            <TextInput
-                                className="flex-1 text-primary font-bold text-base p-0"
-                                placeholder="5,000.00"
-                                placeholderTextColor="#94A3B8"
-                                keyboardType="numeric"
-                                value={hostelServiceFee}
-                                onChangeText={setHostelServiceFee}
-                            />
-                        </View>
-                        <TouchableOpacity
-                            onPress={handleSaveServiceFee}
-                            disabled={savingFee}
-                            className="bg-primary px-6 py-4 rounded-2xl items-center justify-center"
-                        >
-                            {savingFee ? (
-                                <ActivityIndicator size="small" color="white" />
-                            ) : (
-                                <Text className="text-white font-bold text-sm uppercase">Apply</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
                 </View>
 
                 <View className="h-10" />

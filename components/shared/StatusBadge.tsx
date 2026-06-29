@@ -19,6 +19,8 @@ const statusConfig: Record<string, { bg: string; text: string; label: string }> 
     overdue: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Overdue' },
     online: { bg: 'bg-emerald-500', text: 'text-white', label: 'Online' },
     offline: { bg: 'bg-gray-400', text: 'text-white', label: 'Offline' },
+    active: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Active' },
+    suspended: { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Suspended' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className }) => {

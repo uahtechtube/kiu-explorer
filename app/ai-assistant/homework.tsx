@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Camera, Image as ImageIcon, Send, Calculator, ChevronLeft, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../lib/api';
 
 export default function AIHomeworkHelpPage() {
+    const insets = useSafeAreaInsets();
     const router = useRouter();
     const [questionText, setQuestionText] = useState('');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -167,7 +168,10 @@ export default function AIHomeworkHelpPage() {
             </ScrollView>
 
             {/* Footer Action */}
-            <View className="p-6 bg-white border-t border-gray-100">
+            <View 
+                style={{ paddingBottom: Math.max(insets.bottom + 16, 36) }}
+                className="px-6 pt-4 bg-white border-t border-gray-100"
+            >
                 <TouchableOpacity
                     onPress={handleAnalyze}
                     disabled={isAnalyzing || (!questionText && !selectedImage)}
