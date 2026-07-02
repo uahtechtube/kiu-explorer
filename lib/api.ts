@@ -7,15 +7,20 @@ import { Platform } from 'react-native';
 // To find your IP: Run 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux)
 // Look for IPv4 Address under your active network adapter (e.g., 192.168.1.10)
 
-const YOUR_COMPUTER_IP = '192.168.42.249'; // UPDATE THIS with your actual IP if different
+// Set this to true to connect to your live hosted server, or false for local development
+const USE_PRODUCTION = true;
+
+const YOUR_COMPUTER_IP = '192.168.115.249'; // UPDATE THIS with your actual IP if different
 
 const getBaseUrl = () => {
+    if (USE_PRODUCTION) {
+        return 'http://explorer.kiu.edu.ng/public/api';
+    }
+
     if (Platform.OS === 'web') {
         return 'http://localhost:8000/api';
     } else if (Platform.OS === 'android') {
         // For Android Emulator, use 10.0.2.2
-        ;      // For Physical Device, use your computer's IP
-        // Uncomment the line below if using Android Emulator:
         // return 'http://10.0.2.2:8000/api';
 
         // For Physical Android Device:
