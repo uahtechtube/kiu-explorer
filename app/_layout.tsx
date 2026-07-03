@@ -45,7 +45,7 @@ export const unstable_settings = {
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import api from '../lib/api';
 
 // Bulletproof notifications token retriever
@@ -92,8 +92,9 @@ async function registerForPushNotificationsAsync() {
     } else {
       token = (await Notifications.getExpoPushTokenAsync()).data;
     }
-  } catch (e) {
+  } catch (e: any) {
     console.log('Notifications setup skipped or not supported:', e);
+    Alert.alert('Push Notification Error', e.message || String(e));
   }
   return token;
 }

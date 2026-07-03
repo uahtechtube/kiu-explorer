@@ -14,7 +14,7 @@ const YOUR_COMPUTER_IP = '192.168.115.249'; // UPDATE THIS with your actual IP i
 
 const getBaseUrl = () => {
     if (USE_PRODUCTION) {
-        return 'http://explorer.kiu.edu.ng/public/api';
+        return 'https://explorer.kiu.edu.ng/public/api';
     }
 
     if (Platform.OS === 'web') {
