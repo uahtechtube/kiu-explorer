@@ -48,7 +48,9 @@ class AdminPopupAnnouncementController extends Controller
             'body' => 'nullable|string',
             'image' => 'nullable|string',
             'video' => 'nullable|string',
-            'is_active' => 'boolean'
+            'image_file' => 'nullable|file|max:10240',
+            'video_file' => 'nullable|file|max:51200',
+            'is_active' => 'string|in:true,false,1,0'
         ]);
 
         if ($validator->fails()) {
@@ -57,15 +59,31 @@ class AdminPopupAnnouncementController extends Controller
 
         DB::beginTransaction();
         try {
-            $isActive = $request->is_active ?? false;
+            $isActive = $request->has('is_active')
+                ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN)
+                : false;
 
             // Multiple popups may be active at the same time (students see them as slides)
+
+            $image = null;
+            if ($request->hasFile('image_file')) {
+                $image = $this->storeUploadedFile($request->file('image_file'), 'popup-media');
+            } elseif ($request->image) {
+                $image = $this->uploadBase64File($request->image, 'popup-media');
+            }
+
+            $video = null;
+            if ($request->hasFile('video_file')) {
+                $video = $this->storeUploadedFile($request->file('video_file'), 'popup-media');
+            } elseif ($request->video) {
+                $video = $this->uploadBase64File($request->video, 'popup-media');
+            }
 
             $popup = PopupAnnouncement::create([
                 'title' => $request->title,
                 'body' => $request->body,
-                'image' => $request->image ? $this->uploadBase64File($request->image, 'popup-media') : null,
-                'video' => $request->video ? $this->uploadBase64File($request->video, 'popup-media') : null,
+                'image' => $image,
+                'video' => $video,
                 'is_active' => $isActive,
             ]);
 
@@ -129,6 +147,29 @@ class AdminPopupAnnouncementController extends Controller
         $popup->delete();
 
         return response()->json(['message' => 'Popup announcement deleted successfully.'], 200);
+    }
+
+    /**
+     * Store an uploaded file to public storage and return the relative URL path.
+     */
+    private function storeUploadedFile($file, $folder)
+    {
+        $extension = $file->getClientOriginalExtension();
+        if (!$extension) {
+            $extension = 'bin';
+            $mime = $file->getMimeType();
+            if ($mime === 'video/mp4') $extension = 'mp4';
+            elseif ($mime === 'video/quicktime') $extension = 'mov';
+            elseif ($mime === 'image/jpeg') $extension = 'jpg';
+            elseif ($mime === 'image/png') $extension = 'png';
+            elseif ($mime === 'image/webp') $extension = 'webp';
+            elseif ($mime === 'image/gif') $extension = 'gif';
+        }
+
+        $fileName = uniqid() . '_' . time() . '.' . $extension;
+        $path = $file->storeAs($folder, $fileName, 'public');
+
+        return 'storage/' . $path;
     }
 
     /**
