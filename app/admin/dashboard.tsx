@@ -89,6 +89,7 @@ export default function AdminDashboard() {
         { label: 'Approvals', sub: 'Moderation', icon: Shield, color: '#EF4444', route: '/admin/approvals', permission: 'approve_content' },
         { label: 'E-Classroom', sub: 'Live Classes', icon: Monitor, color: '#F59E0B', route: '/admin/classes', permission: 'manage_classes' },
         { label: 'Alert Center', sub: 'Broadcast', icon: Megaphone, color: '#6366F1', route: '/admin/alerts', permission: 'manage_alerts' },
+        { label: 'App Popups', sub: 'Launch Popup', icon: Bell, color: '#F59E0B', route: '/admin/popup-announcement', permission: 'manage_alerts' },
         { label: 'Hostel Admin', sub: 'Accommodation', icon: House, color: '#3B82F6', route: '/admin/hostels', permission: 'manage_hostels' },
         { label: 'Finance', sub: 'Payments', icon: DollarSign, color: '#10B981', route: '/admin/finance/payments', permission: 'manage_finance' },
         { label: 'Moderation', sub: 'Reports Watch', icon: AlertTriangle, color: '#EF4444', route: '/admin/moderation', permission: 'approve_content' },

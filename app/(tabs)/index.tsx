@@ -635,8 +635,18 @@ export default function StudentDashboard() {
               <Text className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Notice</Text>
               <Text className="text-xl font-bold text-primary text-center mb-3">{popupAnnouncement.title}</Text>
 
-              <ScrollView className="max-h-48 w-full mb-6">
-                <Text className="text-gray-600 text-sm text-center leading-5">{popupAnnouncement.message || popupAnnouncement.extract}</Text>
+              <ScrollView className="max-h-56 w-full mb-6">
+                {[
+                    { label: 'Registration Updates', text: popupAnnouncement.registration_updates },
+                    { label: 'Documentation & Deadlines', text: popupAnnouncement.documentation_deadlines },
+                    { label: 'Student Dues', text: popupAnnouncement.student_dues },
+                    { label: 'Upcoming Events', text: popupAnnouncement.events },
+                ].filter(section => section.text).map(section => (
+                    <View key={section.label} className="mb-4">
+                        <Text className="text-primary font-black text-[11px] uppercase tracking-widest mb-1.5">{section.label}</Text>
+                        <Text className="text-gray-600 text-sm leading-5">{section.text}</Text>
+                    </View>
+                ))}
               </ScrollView>
 
               <TouchableOpacity

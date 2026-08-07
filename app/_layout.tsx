@@ -201,6 +201,38 @@ function RootLayoutNav() {
     }
   }, [user]);
 
+  // Handle notification taps: navigate to the in-app notification inbox
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let subscription: any = null;
+    try {
+      const Constants = require('expo-constants').default;
+      if (Constants.appOwnership === 'expo') return; // Expo Go: notifications not supported
+      const Notifications = require('expo-notifications');
+
+      const openInbox = () => {
+        if (user) {
+          router.push('/notifications' as any);
+        }
+      };
+
+      // Handle a notification tapped while app was killed (cold start)
+      Notifications.getLastNotificationResponseAsync()
+        .then((response: any) => {
+          if (response?.notification) openInbox();
+        })
+        .catch(() => { });
+
+      // Handle a notification tapped while the app is running/backgrounded
+      subscription = Notifications.addNotificationResponseReceivedListener(() => openInbox());
+    } catch (e) {
+      console.log('Notification tap listener setup skipped:', e);
+    }
+    return () => {
+      if (subscription) subscription.remove();
+    };
+  }, [user]);
+
   // Enhanced authentication guard with role-based redirect logic
   useEffect(() => {
     if (isLoading) return;

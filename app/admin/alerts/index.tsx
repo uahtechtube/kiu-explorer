@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput, Alert as RNAlert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, AlertCircle, Plus, Bell, Shield, Info, CheckCircle, XCircle, Clock, Send, Trash2, Filter, AlertTriangle } from 'lucide-react-native';
+import { ChevronLeft, AlertCircle, Plus, Bell, Shield, Info, CheckCircle, XCircle, Clock, Send, Trash2, Filter, AlertTriangle, ToggleLeft, ToggleRight, Smartphone } from 'lucide-react-native';
 import api from '../../../lib/api';
 import { PremiumCard } from '../../../components/shared/PremiumCard';
 import { useWebSocket } from '../../../context/WebSocketContext';
@@ -34,11 +34,13 @@ export default function AlertCenter() {
     
     // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [pushSending, setPushSending] = useState(false);
     const [newAlert, setNewAlert] = useState({
         type: 'info' as 'critical' | 'warning' | 'info',
         title: '',
         message: '',
-        severity: 3
+        severity: 3,
+        pushToStudents: false
     });
 
     useEffect(() => {
@@ -88,14 +90,32 @@ export default function AlertCenter() {
         }
 
         try {
+            setPushSending(true);
             await api.post('/admin/alerts', newAlert);
+            let pushResult = '';
+            if (newAlert.pushToStudents) {
+                try {
+                    const pushResponse = await api.post('/notifications/send', {
+                        title: newAlert.title,
+                        body: newAlert.message,
+                        target: 'campus',
+                    });
+                    pushResult = pushResponse.data?.dispatched !== undefined
+                        ? ` Push sent to ${pushResponse.data.dispatched} device(s).`
+                        : ' Push notification dispatched.';
+                } catch (pushError) {
+                    pushResult = ' Push failed — check server logs.';
+                }
+            }
             setShowCreateModal(false);
-            setNewAlert({ type: 'info', title: '', message: '', severity: 3 });
+            setNewAlert({ type: 'info', title: '', message: '', severity: 3, pushToStudents: false });
             fetchAlerts();
             fetchCounts();
-            RNAlert.alert('Success', 'System alert broadcasted successfully.');
+            RNAlert.alert('Success', 'System alert broadcasted successfully.' + pushResult);
         } catch (error) {
             RNAlert.alert('Error', 'Failed to create system alert.');
+        } finally {
+            setPushSending(false);
         }
     };
 
@@ -359,14 +379,45 @@ export default function AlertCenter() {
                                         ))}
                                     </View>
                                 </View>
+
+                                <TouchableOpacity
+                                    onPress={() => setNewAlert({ ...newAlert, pushToStudents: !newAlert.pushToStudents })}
+                                    className="flex-row items-center justify-between bg-primary/5 border border-primary/10 rounded-2xl px-4 py-4 mb-2"
+                                >
+                                    <View className="flex-row items-center flex-1 mr-3">
+                                        <View className="w-9 h-9 bg-primary/10 rounded-xl items-center justify-center mr-3">
+                                            <Smartphone size={18} color="#002147" />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-black text-sm">Also Push to Students</Text>
+                                            <Text className="text-gray-400 text-[10px] font-bold mt-0.5">
+                                                Sends a push notification to all students with the app installed
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {newAlert.pushToStudents ? (
+                                        <ToggleRight size={34} color="#10B981" />
+                                    ) : (
+                                        <ToggleLeft size={34} color="#94A3B8" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity
                                 onPress={handleCreateAlert}
+                                disabled={pushSending}
                                 className="bg-primary py-5 rounded-2xl flex-row items-center justify-center shadow-lg shadow-primary/20 mb-10"
                             >
-                                <Send size={20} color="white" />
-                                <Text className="text-white font-black text-lg ml-3">Broadcast Alert Now</Text>
+                                {pushSending ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <>
+                                        <Send size={20} color="white" />
+                                        <Text className="text-white font-black text-lg ml-3">
+                                            {newAlert.pushToStudents ? 'Broadcast Alert + Push' : 'Broadcast Alert Now'}
+                                        </Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
