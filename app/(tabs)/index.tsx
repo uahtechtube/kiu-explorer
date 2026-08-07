@@ -61,7 +61,7 @@ function PopupSlide({ popup, width }: PopupSlideProps) {
 
     return (
         <View style={{ width }} className="px-6 pb-4">
-            <ScrollView showsVerticalScrollIndicator={false} className="max-h-64">
+            <ScrollView showsVerticalScrollIndicator={false} className="max-h-80">
                 <View className="w-14 h-14 bg-amber-50 rounded-2xl items-center justify-center mb-4 mt-5 border border-amber-100 self-center">
                     <AlertCircle size={28} color="#D97706" />
                 </View>
@@ -77,7 +77,7 @@ function PopupSlide({ popup, width }: PopupSlideProps) {
                     <VideoView
                         player={player}
                         nativeControls
-                        style={{ width: '100%', height: 180, borderRadius: 16, marginTop: 16 }}
+                        style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 16, marginTop: 16, backgroundColor: '#000' }}
                     />
                 )}
             </ScrollView>

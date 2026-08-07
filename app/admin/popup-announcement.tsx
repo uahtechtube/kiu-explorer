@@ -21,13 +21,13 @@ export default function AdminPopupAnnouncement() {
         body: '',
         imageData: '',
         imageUrl: '',
-        videoData: '',
         videoUrl: '',
         is_active: false,
     });
 
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [videoPreview, setVideoPreview] = useState<string | null>(null);
+    const [videoFile, setVideoFile] = useState<{ uri: string; name: string; type: string } | null>(null);
 
     useEffect(() => {
         fetchPopups();
@@ -52,12 +52,12 @@ export default function AdminPopupAnnouncement() {
             body: '',
             imageData: '',
             imageUrl: '',
-            videoData: '',
             videoUrl: '',
             is_active: false,
         });
         setImagePreview(null);
         setVideoPreview(null);
+        setVideoFile(null);
     };
 
     const pickMedia = async (kind: 'image' | 'video') => {
@@ -69,20 +69,22 @@ export default function AdminPopupAnnouncement() {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: kind === 'image' ? ['images'] : ['videos'],
             quality: kind === 'image' ? 0.7 : undefined,
-            base64: true,
+            base64: kind === 'image',
         });
         if (!result.canceled && result.assets[0]) {
             const asset = result.assets[0];
-            const mime = asset.mimeType || (kind === 'image' ? 'image/jpeg' : 'video/mp4');
-            const dataUri = `data:${mime};base64,${asset.base64}`;
             if (kind === 'image') {
+                const mime = asset.mimeType || 'image/jpeg';
+                const dataUri = `data:${mime};base64,${asset.base64}`;
                 setForm(f => ({ ...f, imageData: dataUri }));
                 setImagePreview(asset.uri);
             } else {
                 if (asset.fileSize && asset.fileSize > 15 * 1024 * 1024) {
                     Alert.alert('Large Video', 'The selected video is large and may take a while to upload.');
                 }
-                setForm(f => ({ ...f, videoData: dataUri }));
+                const mime = asset.mimeType || 'video/mp4';
+                const name = asset.fileName || `popup-${Date.now()}.${(mime.split('/')[1] || 'mp4')}`;
+                setVideoFile({ uri: asset.uri, name, type: mime });
                 setVideoPreview(asset.uri);
             }
         }
@@ -94,17 +96,28 @@ export default function AdminPopupAnnouncement() {
             return;
         }
 
-        const payload: any = {
-            title: form.title,
-            body: form.body || null,
-            image: form.imageData || form.imageUrl || null,
-            video: form.videoData || form.videoUrl || null,
-            is_active: form.is_active,
-        };
+        const formData = new FormData();
+        formData.append('title', form.title);
+        formData.append('body', form.body || '');
+        formData.append('is_active', form.is_active ? 'true' : 'false');
+
+        if (videoFile) {
+            formData.append('video_file', videoFile as any);
+        } else if (form.videoUrl) {
+            formData.append('video', form.videoUrl);
+        }
+
+        if (form.imageData) {
+            formData.append('image', form.imageData);
+        } else if (form.imageUrl) {
+            formData.append('image', form.imageUrl);
+        }
 
         setActionLoading(true);
         try {
-            await api.post('/admin/popup-announcement', payload);
+            await api.post('/admin/popup-announcement', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             Alert.alert('Success', 'Popup announcement configured.');
             setCreateVisible(false);
             resetForm();
@@ -312,12 +325,12 @@ export default function AdminPopupAnnouncement() {
                                         >
                                             <Clapperboard size={18} color="#002147" />
                                             <Text className="text-primary font-semibold ml-2">
-                                                {form.videoData ? 'Change Video' : 'Choose Video'}
+                                                {videoFile ? 'Change Video' : 'Choose Video'}
                                             </Text>
                                         </TouchableOpacity>
-                                        {(form.videoData || form.videoUrl) && (
+                                        {(videoFile || form.videoUrl) && (
                                             <TouchableOpacity
-                                                onPress={() => { setForm(f => ({ ...f, videoData: '', videoUrl: '' })); setVideoPreview(null); }}
+                                                onPress={() => { setForm(f => ({ ...f, videoUrl: '' })); setVideoPreview(null); setVideoFile(null); }}
                                                 className="w-14 h-14 bg-red-50 rounded-2xl items-center justify-center"
                                             >
                                                 <Trash2 size={18} color="#EF4444" />
