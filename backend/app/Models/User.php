@@ -43,6 +43,8 @@ class User extends Authenticatable
         'expo_push_token',
         'last_login_date',
         'password',
+        'faculty_id',
+        'department_id',
     ];
 
     /**

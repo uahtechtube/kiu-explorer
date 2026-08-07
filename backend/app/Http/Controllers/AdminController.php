@@ -525,8 +525,15 @@ class AdminController extends Controller
             'first_name' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
-            'role' => 'required|in:student,lecturer,admin',
+            'role' => 'required|in:student,lecturer,tutor,admin,management,security,dean,hod',
         ]);
+
+        $currentUser = $request->user();
+        if (in_array($request->role, ['security', 'dean', 'management', 'admin'])) {
+            if (!$currentUser || !in_array($currentUser->role, ['admin', 'management'])) {
+                return response()->json(['error' => 'Only Super Admins (Admin/Management) can create security, dean, admin, or management accounts.'], 403);
+            }
+        }
 
         $user = User::create([
             'surname' => $request->surname,
@@ -535,14 +542,22 @@ class AdminController extends Controller
             'password' => bcrypt($request->password),
             'role' => $request->role,
             'account_status' => 'active',
+            'faculty_id' => $request->faculty_id,
+            'department_id' => $request->department_id,
         ]);
 
         if ($request->role === 'student') {
-            // Give them a mock matric number or let it be null initially
             $user->update(['matric_number' => 'KIU/'.date('Y').'/STU/'.rand(1000, 9999)]);
-        } elseif ($request->role === 'lecturer') {
+            $user->studentProfile()->create([
+                'faculty_id' => $request->faculty_id,
+                'department_id' => $request->department_id,
+                'programme_id' => $request->programme_id,
+                'academic_session_id' => $request->academic_session_id ?? 1,
+                'level' => $request->level ?? '100',
+            ]);
+        } elseif ($request->role === 'lecturer' || $request->role === 'tutor') {
             $user->lecturerProfile()->create([
-                'department_id' => $request->department_id ?? 1, // Fallback
+                'department_id' => $request->department_id ?? 1,
             ]);
         }
 

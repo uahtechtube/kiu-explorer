@@ -287,6 +287,47 @@ class AssociationController extends Controller
     }
 
     /**
+     * Get pending join requests targeted at associations the user manages.
+     * (Executives across ALL their associations, or admins for all associations.)
+     */
+    public function manageRequests(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->isAdmin()) {
+            $assocIds = Association::query()->pluck('id');
+        } else {
+            $assocIds = AssociationMember::where('user_id', $user->id)
+                ->whereIn('role', ['president', 'vice_president', 'secretary'])
+                ->where('status', 'approved')
+                ->pluck('association_id');
+        }
+
+        $requests = AssociationMember::with('user')
+            ->whereIn('association_id', $assocIds)
+            ->where('status', 'pending')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($member) {
+                $user = $member->user;
+                return [
+                    'id' => $member->id,
+                    'association_id' => $member->association_id,
+                    'requested_at' => optional($member->created_at)->toIso8601String(),
+                    'user' => [
+                        'id' => $user->id ?? null,
+                        'surname' => $user->surname ?? '',
+                        'first_name' => $user->first_name ?? '',
+                        'matric_number' => $user->matric_number ?? '',
+                        'avatar_url' => $user->passport_photograph ?? null,
+                    ],
+                ];
+            });
+
+        return response()->json($requests);
+    }
+
+    /**
      * Get pending join requests (for executives / admin)
      */
     public function pendingRequests(Request $request, $id)

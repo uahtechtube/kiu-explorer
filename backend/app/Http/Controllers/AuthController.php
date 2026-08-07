@@ -60,6 +60,8 @@ class AuthController extends Controller
                 'username' => $request->username,
                 'password' => Hash::make($request->password),
                 'role' => 'student',
+                'faculty_id' => $request->faculty_id,
+                'department_id' => $request->department_id,
             ]);
 
             // Create Profile

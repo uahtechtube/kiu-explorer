@@ -24,6 +24,30 @@ class PollController extends Controller
         return response()->json($polls);
     }
 
+    public function show(Request $request, $id)
+    {
+        $poll = Poll::with(['association', 'options'])->findOrFail($id);
+
+        $hasVoted = PollVote::where('poll_id', $id)
+            ->where('user_id', $request->user()->id)
+            ->exists();
+
+        return response()->json([
+            'id' => $poll->id,
+            'title' => $poll->title,
+            'description' => $poll->description,
+            'association_name' => $poll->association->name ?? null,
+            'options' => $poll->options->map(fn ($o) => [
+                'id' => $o->id,
+                'text' => $o->option_text,
+                'votes' => $o->votes_count,
+            ]),
+            'total_votes' => $poll->options->sum('votes_count'),
+            'ends_at' => $poll->ends_at,
+            'has_voted' => $hasVoted,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [

@@ -25,6 +25,7 @@ class SchoolInfoController extends Controller
                 'established_year' => 2002,
                 'address' => 'Kashim Ibrahim University Campus, Kano, Nigeria',
                 'phone' => '+234 803 123 4567',
+                'whatsapp_number' => '+234 803 123 4567',
                 'email' => 'info@kiu.edu.ng',
                 'website' => 'https://kiu.edu.ng',
                 'background' => 'Kashim Ibrahim University (KIU) is a premier institution dedicated to academic excellence, innovative research, and character building.',
@@ -38,12 +39,10 @@ class SchoolInfoController extends Controller
         return response()->json($info);
     }
 
-    /**
-     * Update school information (Admin only)
-     */
     public function updateSchoolInfo(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'id' => 'nullable|integer',
             'school_name' => 'sometimes|string|max:255',
             'background' => 'sometimes|string',
             'history' => 'sometimes|string',
@@ -54,20 +53,62 @@ class SchoolInfoController extends Controller
             'established_year' => 'sometimes|integer|min:1900|max:' . date('Y'),
             'address' => 'sometimes|string',
             'phone' => 'sometimes|string',
+            'whatsapp_number' => 'sometimes|string|nullable',
             'email' => 'sometimes|email',
             'website' => 'sometimes|url',
+            'photo' => 'nullable|string',         // School logo (base64)
+            'cover_photo' => 'nullable|string',   // School info cover image (base64)
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        $info = SchoolInfo::first();
-        
+        $id = $request->id;
+        $info = $id ? SchoolInfo::find($id) : SchoolInfo::first();
+
+        $data = $request->except(['photo', 'cover_photo']);
+
+        // Handle school logo upload
+        if ($request->has('photo') && $request->photo) {
+            try {
+                if ($info && $info->logo_url) {
+                    $oldPath = str_replace(url('/'), '', $info->logo_url);
+                    $oldPath = ltrim(str_replace('storage/', '', $oldPath), '/');
+                    if (\Storage::disk('public')->exists($oldPath)) {
+                        \Storage::disk('public')->delete($oldPath);
+                    }
+                }
+                
+                $imagePath = $this->uploadBase64Image($request->photo, 'school-photos');
+                $data['logo_url'] = url($imagePath);
+            } catch (\Exception $e) {
+                // Ignore upload error
+            }
+        }
+
+        // Handle school cover image upload
+        if ($request->has('cover_photo') && $request->cover_photo) {
+            try {
+                if ($info && $info->cover_image) {
+                    $oldPath = str_replace(url('/'), '', $info->cover_image);
+                    $oldPath = ltrim(str_replace('storage/', '', $oldPath), '/');
+                    if (\Storage::disk('public')->exists($oldPath)) {
+                        \Storage::disk('public')->delete($oldPath);
+                    }
+                }
+                
+                $imagePath = $this->uploadBase64Image($request->cover_photo, 'school-covers');
+                $data['cover_image'] = url($imagePath);
+            } catch (\Exception $e) {
+                // Ignore upload error
+            }
+        }
+
         if (!$info) {
-            $info = SchoolInfo::create($request->all());
+            $info = SchoolInfo::create($data);
         } else {
-            $info->update($request->all());
+            $info->update($data);
         }
 
         return response()->json([

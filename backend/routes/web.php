@@ -58,6 +58,83 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
         }
     }
 
+    // Action: Fix Permissions
+    if ($request->query('action') == 'fix_permissions') {
+        try {
+            if (file_exists($targetPath)) {
+                // Set main storage path writable
+                chmod($targetPath, 0777);
+                
+                // Recursively chmod all subfolders and files
+                $iterator = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($targetPath, RecursiveDirectoryIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::SELF_FIRST
+                );
+                foreach ($iterator as $item) {
+                    chmod($item->getPathname(), 0777);
+                }
+            }
+            $fixSuccess = true;
+            $fixMessage = "Directory permissions fixed successfully! Programmatically set all storage subfolders and files to 777 (Writable).";
+        } catch (\Throwable $e) {
+            $fixSuccess = false;
+            $fixMessage = "Failed to fix permissions recursively: " . $e->getMessage() . " (You can still set them manually in cPanel).";
+        }
+    }
+
+    // Action: Run Migrations
+    if ($request->query('action') == 'run_migrations') {
+        try {
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            $fixSuccess = true;
+            $fixMessage = "Database migrations executed successfully! Output: " . trim(\Illuminate\Support\Facades\Artisan::output());
+        } catch (\Throwable $e) {
+            $fixSuccess = false;
+            $fixMessage = "Failed to run migrations: " . $e->getMessage();
+        }
+    }
+
+    // Action: Clear Config/Cache
+    if ($request->query('action') == 'clear_cache') {
+        try {
+            \Illuminate\Support\Facades\Artisan::call('config:clear');
+            \Illuminate\Support\Facades\Artisan::call('cache:clear');
+            \Illuminate\Support\Facades\Artisan::call('route:clear');
+            $fixSuccess = true;
+            $fixMessage = "Laravel Cache and configurations cleared successfully. Output: " . trim(\Illuminate\Support\Facades\Artisan::output());
+        } catch (\Throwable $e) {
+            $fixSuccess = false;
+            $fixMessage = "Failed to clear cache: " . $e->getMessage();
+        }
+    }
+
+    // Action: Send Push Notification
+    if ($request->query('action') == 'send_push') {
+        $userId = $request->input('push_user_id');
+        $title = $request->input('push_title', 'Test Push Notification');
+        $body = $request->input('push_body', 'Hello from KIU Explorer!');
+        
+        try {
+            $userModel = \App\Models\User::find($userId);
+            if ($userModel && $userModel->expo_push_token) {
+                $sent = \App\Services\NotificationService::sendToUser($userModel, $title, $body, ['test' => 'data']);
+                if ($sent) {
+                    $fixSuccess = true;
+                    $fixMessage = "Push notification successfully dispatched to user #{$userId} (" . htmlspecialchars($userModel->name) . ") via Expo!";
+                } else {
+                    $fixSuccess = false;
+                    $fixMessage = "Failed to dispatch push notification. Check Laravel logs for details.";
+                }
+            } else {
+                $fixSuccess = false;
+                $fixMessage = "User not found or has no Expo push token registered.";
+            }
+        } catch (\Throwable $e) {
+            $fixSuccess = false;
+            $fixMessage = "Exception sending push notification: " . $e->getMessage();
+        }
+    }
+
     // Action: Clean/Reset Hero Settings (to default)
     if ($request->query('action') == 'reset_hero') {
         try {
@@ -117,6 +194,31 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
         $dbError = $e->getMessage();
     }
 
+    // User check
+    $recentUsers = [];
+    $totalUsers = 0;
+    try {
+        $totalUsers = \Illuminate\Support\Facades\DB::table('users')->count();
+        $recentUsers = \Illuminate\Support\Facades\DB::table('users')
+            ->orderBy('id', 'desc')
+            ->limit(5)
+            ->get();
+    } catch (\Throwable $e) {
+        $dbError .= ' User query error: ' . $e->getMessage();
+    }
+
+    // Push token users check
+    $pushUsers = [];
+    try {
+        $pushUsers = \Illuminate\Support\Facades\DB::table('users')
+            ->whereNotNull('expo_push_token')
+            ->where('expo_push_token', '<>', '')
+            ->select('id', 'first_name', 'surname', 'role', 'expo_push_token')
+            ->get();
+    } catch (\Throwable $e) {
+        $dbError .= ' Push users query error: ' . $e->getMessage();
+    }
+
     // Database Table Schema check (DESCRIBE table)
     $dbSchema = [];
     $schemaError = '';
@@ -140,9 +242,12 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
     $checkFileOnDisk = function($path) {
         if (empty($path)) return ['exists' => false, 'label' => 'Empty / Not Set', 'class' => 'status-empty'];
         try {
+            if (file_exists(public_path($path))) {
+                return ['exists' => true, 'label' => 'Exists on Disk (Public Folder)', 'class' => 'status-ok'];
+            }
             $exists = \Illuminate\Support\Facades\Storage::disk('public')->exists($path);
             if ($exists) {
-                return ['exists' => true, 'label' => 'Exists on Disk', 'class' => 'status-ok'];
+                return ['exists' => true, 'label' => 'Exists on Disk (Laravel Storage)', 'class' => 'status-ok'];
             } else {
                 return ['exists' => false, 'label' => 'Missing on Disk', 'class' => 'status-error'];
             }
@@ -154,6 +259,29 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
     $heroImageCheck = $checkFileOnDisk($settings ? $settings->hero_image_path : null);
     $heroVideoCheck = $checkFileOnDisk($settings ? $settings->hero_video_path : null);
     $apkFileCheck = $checkFileOnDisk($settings ? $settings->apk_file_path : null);
+
+    // File list recursion logic
+    $dirContents = [];
+    $dirError = '';
+    try {
+        if (file_exists($targetPath)) {
+            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($targetPath, RecursiveDirectoryIterator::SKIP_DOTS));
+            foreach ($it as $file) {
+                $relativePath = str_replace($targetPath . DIRECTORY_SEPARATOR, '', $file->getPathname());
+                $relativePath = str_replace('\\', '/', $relativePath);
+                $dirContents[] = [
+                    'path' => $relativePath,
+                    'size' => $file->getSize(),
+                    'mtime' => $file->getMTime()
+                ];
+            }
+            usort($dirContents, function($a, $b) {
+                return $b['mtime'] - $a['mtime'];
+            });
+        }
+    } catch (\Throwable $e) {
+        $dirError = $e->getMessage();
+    }
 
     // PHP limits
     $uploadMax = ini_get('upload_max_filesize');
@@ -476,6 +604,9 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
 
                     <div class="actions-bar">
                         <a href="?action=fix_symlink" class="btn btn-success">Create/Recreate Storage Link</a>
+                        <a href="?action=clear_cache" class="btn btn-warning">Clear Laravel Cache</a>
+                        <a href="?action=fix_permissions" class="btn" style="background-color: #ec4899; color: white;">Fix Directory Permissions</a>
+                        <a href="?action=run_migrations" class="btn" style="background-color: #8b5cf6; color: white;">Run Database Migrations</a>
                     </div>
                 </div>
 
@@ -656,6 +787,108 @@ Route::match(['get', 'post'], '/check-storage', function (Request $request) {
                     </div>';
                 } else {
                     $html .= '<div style="color: var(--text-secondary); text-align: center; padding: 20px;">No team members found in the landing page settings.</div>';
+                }
+                
+            $html .= '
+            </div>
+
+            <!-- Part 4: Storage Directory File List -->
+            <div class="card">
+                <h2>Files in storage/app/public/ (Newest First)</h2>
+                <div class="subtitle" style="margin-bottom: 10px;">Verify what files exist on disk and check their paths.</div>';
+                
+                if ($dirError) {
+                    $html .= '<div style="color:var(--error); font-weight:bold;">Error scanning storage: ' . htmlspecialchars($dirError) . '</div>';
+                } else if (empty($dirContents)) {
+                    $html .= '<div style="color:var(--text-secondary); text-align:center; padding:20px;">No files found in storage directory.</div>';
+                } else {
+                    $html .= '
+                    <div class="team-list">
+                        <div class="team-header" style="display: grid; grid-template-columns: 2.5fr 1fr 1fr;">
+                            <span>Relative Path</span>
+                            <span>Size</span>
+                            <span style="text-align: right;">Upload Time</span>
+                        </div>';
+                        foreach ($dirContents as $fileItem) {
+                            $html .= '
+                            <div class="team-item" style="display: grid; grid-template-columns: 2.5fr 1fr 1fr;">
+                                <span style="font-family: monospace; font-size: 12.5px; word-break: break-all;">' . htmlspecialchars($fileItem['path']) . '</span>
+                                <span>' . number_format($fileItem['size']) . ' bytes</span>
+                                <span style="text-align: right; font-size: 12px; color: var(--text-secondary);">' . date('Y-m-d H:i:s', $fileItem['mtime']) . '</span>
+                            </div>';
+                        }
+                    $html .= '
+                    </div>';
+                }
+                
+            $html .= '
+            </div>
+
+            <!-- Part 5: Recent Users Database Check -->
+            <div class="card">
+                <h2>Live Database Check: Recent Users (Total: ' . $totalUsers . ')</h2>
+                <div class="subtitle" style="margin-bottom: 10px;">Check the exact values stored in the `passport_photograph` column for recently registered users.</div>';
+                
+                if (empty($recentUsers)) {
+                    $html .= '<div style="color:var(--text-secondary); text-align:center; padding:20px;">No users found in database.</div>';
+                } else {
+                    $html .= '
+                    <div class="team-list">
+                        <div class="team-header" style="display: grid; grid-template-columns: 0.5fr 1.5fr 0.8fr 2fr 2fr;">
+                            <span>ID</span>
+                            <span>Name</span>
+                            <span>Role</span>
+                            <span>Passport Photograph Value</span>
+                            <span>Expo Push Token</span>
+                        </div>';
+                        foreach ($recentUsers as $u) {
+                            $html .= '
+                            <div class="team-item" style="display: grid; grid-template-columns: 0.5fr 1.5fr 0.8fr 2fr 2fr;">
+                                <span>' . $u->id . '</span>
+                                <span style="font-weight: 600;">' . htmlspecialchars(($u->first_name ?? '') . ' ' . ($u->surname ?? '')) . '</span>
+                                <span class="status-badge status-ok">' . htmlspecialchars($u->role) . '</span>
+                                <span style="font-family: monospace; font-size: 11px; word-break: break-all;">' . htmlspecialchars($u->passport_photograph ?? 'NULL') . '</span>
+                                <span style="font-family: monospace; font-size: 11px; word-break: break-all; color: var(--primary);">' . htmlspecialchars($u->expo_push_token ?? 'NULL') . '</span>
+                            </div>';
+                        }
+                    $html .= '
+                    </div>';
+                }
+                
+            $html .= '
+            </div>
+
+            <!-- Part 6: Push Notification Tester -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>Push Notification Tester</h2>
+                <div class="subtitle" style="margin-bottom: 10px;">Select a user with an active Expo push token and send a test notification.</div>';
+                
+                if (empty($pushUsers) || count($pushUsers) === 0) {
+                    $html .= '<div style="color:var(--text-secondary); text-align:center; padding:20px;">No users found with an active <code>expo_push_token</code>. Make sure to log in or register on the mobile app to obtain a token.</div>';
+                } else {
+                    $html .= '
+                    <form action="?action=send_push" method="POST" style="margin-top: 15px;">
+                        ' . csrf_field() . '
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="push_user_id" style="display:block; font-weight:600; margin-bottom:5px;">Select Target User</label>
+                            <select name="push_user_id" id="push_user_id" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; background: #fff; font-size:14px;" required>
+                                <option value="">-- Choose User --</option>';
+                                foreach ($pushUsers as $pu) {
+                                    $html .= '<option value="' . $pu->id . '">' . htmlspecialchars(($pu->first_name ?? '') . ' ' . ($pu->surname ?? '')) . ' (' . htmlspecialchars($pu->role) . ') - Token: ' . substr($pu->expo_push_token, 0, 20) . '...</option>';
+                                }
+                            $html .= '
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="push_title" style="display:block; font-weight:600; margin-bottom:5px;">Notification Title</label>
+                            <input type="text" name="push_title" id="push_title" value="Test Push Notification" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label for="push_body" style="display:block; font-weight:600; margin-bottom:5px;">Notification Body</label>
+                            <textarea name="push_body" id="push_body" rows="2" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:14px;" required>Hello from KIU Explorer!</textarea>
+                        </div>
+                        <button type="submit" class="btn" style="width:100%; background: #10b981; color:#fff; border:none; padding:12px; font-weight:bold; border-radius:8px; cursor:pointer;">Send Push Notification</button>
+                    </form>';
                 }
                 
             $html .= '

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\VirtualClass;
 use App\Models\VirtualClassMessage; // Add this line
+use App\Models\VirtualClassMaterial;
 use App\Models\Attendance;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -241,6 +243,99 @@ class VirtualClassController extends Controller
 
         return response()->json($virtualClass);
     }
+
+    /**
+     * List recorded/archived class sessions (students).
+     */
+    public function recordedList(Request $request)
+    {
+        $query = VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
+            ->where(function ($q) {
+                $q->where('is_recorded', true)->orWhereNotNull('recording_url');
+            });
+
+        $filter = $request->get('filter', 'all');
+        if ($filter === 'recent') {
+            $query->orderByDesc('scheduled_at');
+        } elseif ($filter === 'popular') {
+            $query->withCount('attendances')->orderByDesc('attendances_count');
+        } else {
+            $query->orderByDesc('scheduled_at');
+        }
+
+        $recordings = $query->get()->map(function ($class) {
+            return [
+                'id' => $class->id,
+                'title' => $class->title,
+                'course_code' => $class->course->code ?? null,
+                'lecturer_name' => $class->lecturer
+                    ? $class->lecturer->first_name . ' ' . $class->lecturer->surname
+                    : 'N/A',
+                'recorded_at' => optional($class->scheduled_at)->toDateTimeString(),
+                'duration' => $class->duration,
+                'views' => $class->attendances_count ?? $class->attendances()->count(),
+                'thumbnail_url' => null,
+                'recording_url' => $class->recording_url,
+                'materials_count' => VirtualClassMaterial::where('virtual_class_id', $class->id)->count(),
+            ];
+        });
+
+        return response()->json(['data' => $recordings]);
+    }
+
+    /**
+     * Get the list of downloadable materials for a recorded class (students).
+     */
+    public function materials($id)
+    {
+        $class = VirtualClass::with(['course', 'lecturer:id,surname,first_name'])->findOrFail($id);
+
+        $materials = VirtualClassMaterial::where('virtual_class_id', $id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($material) {
+                return [
+                    'id' => $material->id,
+                    'name' => $material->name,
+                    'type' => $material->type,
+                    'size' => $material->file_size,
+                    'uploaded_at' => optional($material->created_at)->toDateTimeString(),
+                    'url' => $material->file_path,
+                    'downloads' => $material->downloads,
+                ];
+            });
+
+        return response()->json([
+            'class' => [
+                'id' => $class->id,
+                'title' => $class->title,
+                'course_code' => $class->course->code ?? null,
+                'lecturer_name' => $class->lecturer
+                    ? $class->lecturer->first_name . ' ' . $class->lecturer->surname
+                    : 'N/A',
+            ],
+            'materials' => $materials,
+        ]);
+    }
+
+    /**
+     * Trigger a material download, incrementing the download count.
+     */
+    public function downloadMaterial($id)
+    {
+        $material = VirtualClassMaterial::findOrFail($id);
+        $material->increment('downloads');
+
+        if (Storage::disk('public')->exists($material->file_path)) {
+            return Storage::disk('public')->download($material->file_path);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Download intent recorded.',
+        ]);
+    }
+
     /**
      * Get chat messages for a virtual class
      */

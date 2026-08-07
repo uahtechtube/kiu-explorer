@@ -30,6 +30,14 @@ class StudentDashboardController extends Controller
             // 2. Real Enrolled Course Count
             $enrolledCount = \App\Models\CourseRegistration::where('user_id', $user->id)->count();
 
+            // Courses matching student's department and level
+            $deptId = $user->department_id ?? ($user->studentProfile ? $user->studentProfile->department_id : null);
+            $level = $user->studentProfile ? $user->studentProfile->level : '100';
+            $departmentCoursesCount = \App\Models\Course::where('department_id', $deptId)->where('level', $level)->count();
+
+            // Total online classes attended
+            $onlineClassesAttended = \App\Models\Attendance::where('user_id', $user->id)->count();
+
             // Calculate dynamic CGPA based on student course registrations
             $registrations = \App\Models\CourseRegistration::with('course')
                 ->where('user_id', $user->id)
@@ -185,8 +193,10 @@ class StudentDashboardController extends Controller
                 'session' => $currentSession?->name ?? 'N/A',
                 'overview' => [
                     'enrolled_courses' => $enrolledCount,
+                    'enrolled_courses_filtered' => $departmentCoursesCount,
                     'cgpa' => $cgpa, 
                     'attendance' => $rate . '%',
+                    'online_classes_attended' => $onlineClassesAttended,
                     'total_tutorials' => $totalTutorials,
                     'total_classes' => $upcomingClasses->count(),
                 ],

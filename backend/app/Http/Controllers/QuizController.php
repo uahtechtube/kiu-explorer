@@ -26,6 +26,33 @@ class QuizController extends Controller
         return response()->json(['data' => $query->get()]);
     }
 
+    public function show(Request $request, $id)
+    {
+        $quiz = Quiz::with(['course', 'questions.options'])->findOrFail($id);
+
+        $questions = $quiz->questions->map(function ($question) use ($request) {
+            $correctIndex = $question->options->search(function ($option) {
+                return $option->is_correct;
+            });
+
+            return [
+                'id' => $question->id,
+                'text' => $question->question_text,
+                'options' => $question->options->pluck('option_text')->values()->toArray(),
+                'correct_option' => $correctIndex === false ? 0 : $correctIndex,
+            ];
+        });
+
+        return response()->json([
+            'id' => $quiz->id,
+            'title' => $quiz->title,
+            'description' => $quiz->description,
+            'course' => $quiz->course->title ?? null,
+            'time_limit' => $quiz->time_limit,
+            'questions' => $questions,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [

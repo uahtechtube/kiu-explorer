@@ -1265,6 +1265,18 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="apk_file_path_manual">APK File Path (Manual Override)</label>
+                                <input type="text" id="apk_file_path_manual" name="apk_file_path_manual" value="{{ old('apk_file_path_manual', $settings->apk_file_path) }}" placeholder="e.g., apks/kiu-explorer.apk">
+                                <span style="font-size: 11px; color: var(--text-secondary);">Set to path relative to public storage, e.g. <code>apks/kiu-explorer.apk</code></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="apk_size_manual">APK File Size (Manual Override)</label>
+                                <input type="text" id="apk_size_manual" name="apk_size_manual" value="{{ old('apk_size_manual', $settings->apk_size) }}" placeholder="e.g., 87.1 MB">
+                                <span style="font-size: 11px; color: var(--text-secondary);">E.g., <code>87.1 MB</code></span>
+                            </div>
+
+                            <div class="form-group">
                                 <label>Asset Info</label>
                                 <div style="padding:12px; background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:10px; font-size:13.5px; height: 100%; display: flex; align-items: center;">
                                     <span>Size: <strong>{{ $settings->apk_size }}</strong></span>

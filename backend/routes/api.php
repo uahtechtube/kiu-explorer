@@ -16,11 +16,13 @@ Route::get('/user', function (Request $request) {
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Public Academic Data
+// Public Academic & School Data
 Route::get('/faculties', [AcademicController::class, 'getFaculties']);
 Route::get('/faculties/{id}/departments', [AcademicController::class, 'getDepartments']);
 Route::get('/departments/{id}/programmes', [AcademicController::class, 'getProgrammes']);
 Route::get('/academic-sessions', [AcademicController::class, 'getSessions']);
+Route::get('/school/info', [\App\Http\Controllers\SchoolInfoController::class, 'getSchoolInfo']);
+Route::get('/popup-announcement/active', [\App\Http\Controllers\AdminPopupAnnouncementController::class, 'getActive']);
 
 // Protected Routes
 Route::middleware(['auth:sanctum'])->group(function () {
@@ -38,6 +40,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/admin/create-lecturer', [\App\Http\Controllers\AdminController::class, 'createLecturer']);
     Route::post('/admin/allocations', [\App\Http\Controllers\AllocationController::class, 'store']);
     Route::get('/admin/allocations', [\App\Http\Controllers\AllocationController::class, 'index']);
+    Route::post('/notifications/send', [\App\Http\Controllers\NotificationSenderController::class, 'send']);
+
+    // Popup Announcement routes
+    Route::get('/admin/popup-announcement', [\App\Http\Controllers\AdminPopupAnnouncementController::class, 'index']);
+    Route::post('/admin/popup-announcement', [\App\Http\Controllers\AdminPopupAnnouncementController::class, 'store']);
+    Route::post('/admin/popup-announcement/{id}/toggle', [\App\Http\Controllers\AdminPopupAnnouncementController::class, 'toggleActive']);
+    Route::delete('/admin/popup-announcement/{id}', [\App\Http\Controllers\AdminPopupAnnouncementController::class, 'destroy']);
+    
+    // Dean Routes
+    Route::get('/dean/stats', [\App\Http\Controllers\DeanController::class, 'stats']);
+    Route::post('/dean/users', [\App\Http\Controllers\DeanController::class, 'createUser']);
+    Route::get('/dean/students', [\App\Http\Controllers\DeanController::class, 'students']);
+
+    // HOD Routes
+    Route::get('/hod/stats', [\App\Http\Controllers\HodController::class, 'stats']);
+    Route::post('/hod/users', [\App\Http\Controllers\HodController::class, 'createUser']);
+    Route::post('/hod/programmes', [\App\Http\Controllers\HodController::class, 'createProgramme']);
+    Route::post('/hod/courses', [\App\Http\Controllers\HodController::class, 'createCourse']);
+    Route::get('/hod/feed', [\App\Http\Controllers\HodController::class, 'getDepartmentFeed']);
+    Route::delete('/hod/posts/{id}', [\App\Http\Controllers\HodController::class, 'deletePost']);
+    Route::delete('/hod/comments/{id}', [\App\Http\Controllers\HodController::class, 'deleteComment']);
     
     // Course Management
     Route::get('/courses', [\App\Http\Controllers\CourseController::class, 'index']);
@@ -129,7 +152,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         
         // Virtual Classes
         Route::get('/virtual-classes', [\App\Http\Controllers\VirtualClassController::class, 'index']);
+        Route::get('/virtual-classes/recorded', [\App\Http\Controllers\VirtualClassController::class, 'recordedList']);
         Route::get('/virtual-classes/{id}', [\App\Http\Controllers\VirtualClassController::class, 'show']);
+        Route::get('/virtual-classes/{id}/materials', [\App\Http\Controllers\VirtualClassController::class, 'materials']);
+        Route::post('/virtual-classes/materials/{id}/download', [\App\Http\Controllers\VirtualClassController::class, 'downloadMaterial']);
         Route::post('/virtual-classes/{id}/join', [\App\Http\Controllers\VirtualClassController::class, 'joinClass']);
         Route::post('/virtual-classes/{id}/attendance', [\App\Http\Controllers\VirtualClassController::class, 'markAttendance']);
         Route::get('/virtual-classes/{id}/chat', [\App\Http\Controllers\VirtualClassController::class, 'getChat']);
@@ -151,6 +177,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/exams/{id}/submit', [\App\Http\Controllers\ExamController::class, 'submitAttempt']);
         
         // Associations (Full Student CRUD & Approvals)
+        Route::get('/associations/manage/requests', [\App\Http\Controllers\AssociationController::class, 'manageRequests']);
         Route::get('/associations', [\App\Http\Controllers\AssociationController::class, 'index']);
         Route::post('/associations', [\App\Http\Controllers\AssociationController::class, 'store']);
         Route::get('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'show']);
@@ -239,6 +266,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/events/{id}', [\App\Http\Controllers\EventController::class, 'destroy']);
 
     // Associations Management (Admin/Lecturer)
+    Route::get('/associations/manage/requests', [\App\Http\Controllers\AssociationController::class, 'manageRequests']);
     Route::get('/associations/my/memberships', [\App\Http\Controllers\AssociationController::class, 'myAssociations']);
     Route::post('/associations', [\App\Http\Controllers\AssociationController::class, 'store']);
     Route::put('/associations/{id}', [\App\Http\Controllers\AssociationController::class, 'update']);
@@ -282,7 +310,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/library/{id}', [\App\Http\Controllers\LibraryController::class, 'destroy']); // Admin
 
     // School Information (Consolidated)
-    Route::get('/school/info', [\App\Http\Controllers\SchoolInfoController::class, 'getSchoolInfo']);
     Route::put('/school/info', [\App\Http\Controllers\SchoolInfoController::class, 'updateSchoolInfo']); // Admin
     
     // App Developers / About Us Routes
@@ -366,6 +393,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Practice Quizzes
     Route::get('/quizzes', [\App\Http\Controllers\QuizController::class, 'index']);
     Route::post('/quizzes', [\App\Http\Controllers\QuizController::class, 'store']); // Lecturer
+    Route::get('/quizzes/{id}', [\App\Http\Controllers\QuizController::class, 'show']);
     Route::post('/quizzes/{id}/start', [\App\Http\Controllers\QuizController::class, 'start']); // Student
     Route::post('/quiz-attempts/{id}/submit', [\App\Http\Controllers\QuizController::class, 'submit']); // Student
     Route::get('/quiz-attempts/{id}/results', [\App\Http\Controllers\QuizController::class, 'results']); // Student
@@ -373,6 +401,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Association Polls
     Route::get('/polls', [\App\Http\Controllers\PollController::class, 'index']);
     Route::post('/polls', [\App\Http\Controllers\PollController::class, 'store']); // Association Executive
+    Route::get('/polls/{id}', [\App\Http\Controllers\PollController::class, 'show']);
+    Route::get('/associations/polls/{id}', [\App\Http\Controllers\PollController::class, 'show']);
     Route::post('/polls/{id}/vote', [\App\Http\Controllers\PollController::class, 'vote']);
     Route::get('/polls/{id}/results', [\App\Http\Controllers\PollController::class, 'results']);
     Route::post('/polls/{id}/close', [\App\Http\Controllers\PollController::class, 'close']); // Creator/Admin

@@ -61,8 +61,21 @@ class LandingPageController extends Controller
         } catch (\Exception $e) {}
 
         // Check if there is an uploaded APK file, otherwise serve the mock APK
-        if ($settings->apk_file_path && Storage::disk('public')->exists($settings->apk_file_path)) {
-            return redirect(asset('storage/' . $settings->apk_file_path));
+        if ($settings->apk_file_path) {
+            // Case 1: Check in the public directory directly (e.g. public/apks/kiu-explorer.apk)
+            if (file_exists(public_path($settings->apk_file_path))) {
+                return redirect(asset($settings->apk_file_path));
+            }
+
+            // Case 2: Check in Laravel public storage
+            if (Storage::disk('public')->exists($settings->apk_file_path)) {
+                return redirect(asset('storage/' . $settings->apk_file_path));
+            }
+
+            // Case 3: If it's a full URL
+            if (filter_var($settings->apk_file_path, FILTER_VALIDATE_URL)) {
+                return redirect($settings->apk_file_path);
+            }
         }
 
         // Fallback: serve the public mock file
@@ -256,7 +269,9 @@ class LandingPageController extends Controller
             'primary_color' => 'nullable|string|max:20',
             'secondary_color' => 'nullable|string|max:20',
             'theme_mode' => 'nullable|in:dark,light',
-            'apk_file' => 'nullable|file|max:51200', // Max 50MB
+            'apk_file' => 'nullable|file|max:102400', // Increased to Max 100MB
+            'apk_file_path_manual' => 'nullable|string|max:255',
+            'apk_size_manual' => 'nullable|string|max:50',
             'hero_image' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:10240', // Max 10MB
             'hero_video' => 'nullable|file|mimes:mp4,mov,ogg,qt,webm|max:51200', // Max 50MB
             'team.*.photo' => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:10240', // Max 10MB
@@ -341,6 +356,12 @@ class LandingPageController extends Controller
             // Recalculate file size
             $bytes = $file->getSize();
             $data['apk_size'] = $this->formatBytes($bytes);
+        } elseif ($request->has('apk_file_path_manual') && !empty($request->input('apk_file_path_manual'))) {
+            // Manual Override logic (e.g. apks/kiu-explorer.apk)
+            $data['apk_file_path'] = $request->input('apk_file_path_manual');
+            if ($request->has('apk_size_manual')) {
+                $data['apk_size'] = $request->input('apk_size_manual');
+            }
         }
 
         // Process features (JSON array)
