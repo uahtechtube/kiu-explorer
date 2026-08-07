@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
 
-const LogoImage = require('../../assets/images/logo.jpg');
+const LogoImage = require('../../assets/images/logo.png');
 
 export default function WelcomeScreen() {
     const router = useRouter();
@@ -40,7 +40,7 @@ export default function WelcomeScreen() {
                 {/* Bottom Section - Actions with Safe Spacing */}
                 <View className="pb-4">
                     <TouchableOpacity
-                        onPress={() => router.push('/login')}
+                        onPress={() => router.push('/login?tab=login' as any)}
                         className="bg-primary h-16 rounded-2xl flex-row items-center justify-center shadow-xl shadow-primary/30 mb-5"
                     >
                         <Text className="text-white text-lg font-bold mr-2">Login</Text>
@@ -48,7 +48,7 @@ export default function WelcomeScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => router.push('/register')}
+                        onPress={() => router.push('/login?tab=register' as any)}
                         className="h-16 rounded-2xl items-center justify-center border-2 border-primary/20 mb-6"
                     >
                         <Text className="text-primary text-lg font-bold">Create an Account</Text>

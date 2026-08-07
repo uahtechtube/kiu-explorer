@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Alert, Dimensions, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Users, ShieldCheck, FileText, ChevronRight, ArrowLeft, MoreVertical, UserCheck, Lock, Send, MessageSquare, Heart, Sparkles, BookOpen, X, Globe } from 'lucide-react-native';
+import { Users, ShieldCheck, FileText, ChevronRight, UserCheck, Lock, Send, MessageSquare, Heart, Sparkles, BookOpen, X, Globe } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -220,30 +221,14 @@ export default function AssociationDetailPage() {
         <View className="flex-1 bg-white">
             <Stack.Screen options={{ headerShown: false }} />
 
+            <SafeAreaView edges={['top']} className="bg-white">
+                <ScreenHeader title={association.acronym} subtitle={`${association.category} Division`} />
+            </SafeAreaView>
+
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Branding Header Section */}
-                <View className="bg-primary pt-12 pb-24 px-6 rounded-b-[40px] relative">
-                    <SafeAreaView className="flex-row justify-between mb-8">
-                        <TouchableOpacity onPress={() => router.back()} className="w-12 h-12 bg-white/10 rounded-2xl border border-white/20 items-center justify-center">
-                            <ArrowLeft size={24} color="white" />
-                        </TouchableOpacity>
-
-                        {association.member_role === 'president' ? (
-                            <TouchableOpacity 
-                                onPress={() => router.push(`/associations/manage/${id}`)}
-                                className="bg-secondary px-4 py-2.5 rounded-2xl flex-row items-center border border-white/10 shadow-md"
-                            >
-                                <ShieldCheck size={16} color="#002147" />
-                                <Text className="text-primary font-black text-[10px] ml-1.5 uppercase">Executive Panel</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl border border-white/20 items-center justify-center">
-                                <MoreVertical size={24} color="white" />
-                            </TouchableOpacity>
-                        )}
-                    </SafeAreaView>
-
-                    <View className="flex-row items-center mb-6">
+                <View className="px-6 pt-5 pb-4">
+                    <View className="flex-row items-center mb-5">
                         <PremiumCard variant="elevated" className="w-24 h-24 p-0 rounded-[32px] overflow-hidden bg-white border-0 shadow-lg items-center justify-center">
                             <Image 
                                 source={{ uri: association.logo_url || `https://ui-avatars.com/api/?name=${association.acronym}&background=002147&color=fff` }} 
@@ -252,29 +237,36 @@ export default function AssociationDetailPage() {
                             />
                         </PremiumCard>
                         <View className="ml-6 flex-1">
-                            <Text className="text-secondary font-black text-[10px] uppercase tracking-widest mb-1">{association.category} Division</Text>
-                            <Text className="text-white text-3xl font-black">{association.acronym}</Text>
-                        </View>
-                    </View>
+                            {association.member_role === 'president' ? (
+                                <TouchableOpacity 
+                                    onPress={() => router.push(`/associations/manage/${id}`)}
+                                    className="bg-secondary px-4 py-2.5 rounded-2xl flex-row items-center border border-primary/10 shadow-md self-start"
+                                >
+                                    <ShieldCheck size={16} color="#002147" />
+                                    <Text className="text-primary font-black text-[10px] ml-1.5 uppercase">Executive Panel</Text>
+                                </TouchableOpacity>
+                            ) : null}
 
-                    <View className="flex-row items-center pt-2">
-                        <View className="bg-white/10 px-4 py-2 rounded-xl flex-row items-center mr-3 border border-white/5">
-                            <Users size={14} color="#FFD700" />
-                            <Text className="text-white font-bold text-xs ml-2">{association.members_count}</Text>
-                        </View>
-                        {isMemberOrExec && (
-                            <View className="bg-emerald-500/20 px-4 py-2 rounded-xl flex-row items-center border border-emerald-500/20">
-                                <ShieldCheck size={14} color="#10B981" />
-                                <Text className="text-emerald-500 font-bold text-xs ml-2 uppercase">
-                                    {association.member_role === 'president' ? 'PRESIDENT' : 'MEMBER'}
-                                </Text>
+                            <View className="flex-row items-center pt-2">
+                                <View className="bg-gray-50 px-4 py-2 rounded-xl flex-row items-center mr-3 border border-gray-100">
+                                    <Users size={14} color="#64748B" />
+                                    <Text className="text-primary font-bold text-xs ml-2">{association.members_count}</Text>
+                                </View>
+                                {isMemberOrExec && (
+                                    <View className="bg-emerald-50 px-4 py-2 rounded-xl flex-row items-center border border-emerald-100">
+                                        <ShieldCheck size={14} color="#10B981" />
+                                        <Text className="text-emerald-600 font-bold text-xs ml-2 uppercase">
+                                            {association.member_role === 'president' ? 'PRESIDENT' : 'MEMBER'}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
-                        )}
+                        </View>
                     </View>
                 </View>
 
                 {/* Sub-Header Tabs (Overview / Feed) */}
-                <View className="px-6 -mt-8 mb-6 z-10">
+                <View className="px-6 mb-6 z-10">
                     <View className="bg-white p-1 rounded-2xl flex-row shadow-xl shadow-primary/10">
                         {['Overview', 'Feed'].map((tab) => (
                             <TouchableOpacity

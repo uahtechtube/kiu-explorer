@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, TextInput, ActivityIndicator, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, MapPin, Navigation, Search, Layers, Clock, Phone, Mail, BookOpen, Coffee, Briefcase, Award, ShieldAlert, X, Compass, ExternalLink, Home } from 'lucide-react-native';
+import { MapPin, Navigation, Search, Layers, Clock, Phone, Mail, BookOpen, Coffee, Briefcase, Award, ShieldAlert, X, Compass, ExternalLink, Home } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -297,28 +298,22 @@ export default function CampusMapPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header with Search */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
+            <ScreenHeader
+                title="University Map"
+                subtitle="Campus Explorer"
+                rightAction={
                     <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">Campus Explorer</Text>
-                        <Text className="text-white text-xl font-bold">University Map</Text>
-                    </View>
-                    <TouchableOpacity 
                         onPress={fetchLocations}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
+                        className="w-10 h-10 bg-secondary rounded-2xl items-center justify-center"
                     >
-                        <Layers size={20} color="white" />
+                        <Layers size={20} color="#002147" />
                     </TouchableOpacity>
-                </View>
+                }
+            />
 
-                {/* Premium Search Bar */}
-                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20">
+            {/* Premium Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-sm border border-gray-100">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchQuery}
@@ -333,19 +328,19 @@ export default function CampusMapPage() {
                 </View>
 
                 {/* Category Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-8 -mx-2">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pt-3">
                     {categories.map((cat) => (
                         <TouchableOpacity
                             key={cat}
                             onPress={() => {
                                 setSelectedCategory(cat);
                             }}
-                            className={`px-6 py-2.5 rounded-full mx-2 border ${selectedCategory === cat
-                                ? 'bg-secondary border-secondary shadow-lg shadow-secondary/20'
-                                : 'bg-white/10 border-white/10'
+                            className={`px-6 py-2.5 rounded-full mr-3 border ${selectedCategory === cat
+                                ? 'bg-secondary border-secondary shadow-md shadow-secondary/20'
+                                : 'bg-white border-gray-100'
                                 }`}
                         >
-                            <Text className={`font-black text-[10px] uppercase ${selectedCategory === cat ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`font-black text-[10px] uppercase ${selectedCategory === cat ? 'text-primary' : 'text-gray-600'}`}>
                                 {cat}
                             </Text>
                         </TouchableOpacity>
@@ -353,7 +348,7 @@ export default function CampusMapPage() {
                 </ScrollView>
             </View>
 
-            <ScrollView className="flex-1 mt-4 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
+            <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
                 {/* Visual Map Overview using Google Maps Styled WebView */}
                 <PremiumCard variant="elevated" className="p-0 overflow-hidden mb-6 mt-2 h-[260px] border border-gray-100 rounded-[32px] shadow-lg">
                     {locations.length > 0 ? (

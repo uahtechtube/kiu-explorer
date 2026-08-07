@@ -21,6 +21,8 @@ interface SchoolDetails {
     phone: string;
     email: string;
     website: string;
+    logo_url?: string;
+    cover_image?: string;
 }
 
 export default function SchoolInfoPage() {
@@ -87,7 +89,7 @@ export default function SchoolInfoPage() {
             {/* Visual Cover Section */}
             <View className="h-[350px] relative">
                 <Image
-                    source={{ uri: 'https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80' }}
+                    source={{ uri: info?.cover_image || info?.logo_url || 'https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80' }}
                     className="w-full h-full"
                     resizeMode="cover"
                 />

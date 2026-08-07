@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { ChevronLeft, Info, CheckCircle2, PieChart, Users, Clock, ShieldCheck, Share2 } from 'lucide-react-native';
+import { CheckCircle2, Users, Clock, ShieldCheck } from 'lucide-react-native';
 import api from '../../../lib/api';
 import { PremiumCard } from '../../../components/shared/PremiumCard';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -91,24 +92,9 @@ export default function PollVotingPage() {
         <SafeAreaView className="flex-1 bg-white">
             <Stack.Screen options={{ headerShown: false }} />
 
+            <ScreenHeader title="Poll" subtitle={poll?.association_name} />
+
             <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 100 }}>
-                {/* Poll Header */}
-                <View className="flex-row justify-between items-center py-6 mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-gray-50 rounded-2xl items-center justify-center border border-gray-100"
-                    >
-                        <ChevronLeft size={24} color="#002147" />
-                    </TouchableOpacity>
-                    <View className="flex-row">
-                        <TouchableOpacity className="w-12 h-12 bg-gray-50 rounded-2xl items-center justify-center border border-gray-100 mr-2">
-                            <Share2 size={20} color="#002147" />
-                        </TouchableOpacity>
-                        <TouchableOpacity className="w-12 h-12 bg-gray-50 rounded-2xl items-center justify-center border border-gray-100">
-                            <Info size={20} color="#002147" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
 
                 {/* Association Branding */}
                 <View className="bg-primary px-4 py-1.5 rounded-lg self-start mb-4">

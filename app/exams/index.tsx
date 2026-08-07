@@ -128,16 +128,20 @@ export default function ExamsPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 bg-white/10 rounded-full items-center justify-center mb-4"
-                >
-                    <ChevronLeft size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-                <Text className="text-white text-3xl font-bold">E-Exams</Text>
-                <Text className="text-gray-300 text-sm mt-1">Practice tests and assessments</Text>
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Exams & CBT</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Computer Based Tests & Assessments</Text>
+                    </View>
+                </View>
+                <View className="p-2.5 bg-rose-50 rounded-xl border border-rose-100/60">
+                    <FileText size={20} color="#DC2626" />
+                </View>
             </View>
 
             {/* Tabs */}

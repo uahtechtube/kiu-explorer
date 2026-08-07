@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import api from '../../lib/api';
 
 export default function ProfileScreen() {
-    const { user, signOut, signIn } = useAuth();
+    const { user, signOut, signIn, updateProfile } = useAuth();
     const router = useRouter();
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
@@ -44,22 +44,47 @@ export default function ProfileScreen() {
 
     // Edit Form State
     const [editForm, setEditForm] = useState({
+        surname: '',
+        first_name: '',
+        other_names: '',
+        gender: '',
+        dob: '',
+        nationality: '',
         phone_number: '',
+        alternative_phone_number: '',
         state_of_origin: '',
         lga: '',
         residential_address: '',
+        city: '',
+        state_of_residence: '',
         guardian_name: '',
+        guardian_relationship: '',
         guardian_phone: '',
+        guardian_email: '',
+        guardian_address: '',
     });
 
     const openEditModal = () => {
+        const studentProfile = user?.student_profile || user?.studentProfile || {};
         setEditForm({
+            surname: user?.surname || '',
+            first_name: user?.first_name || '',
+            other_names: user?.other_names || '',
+            gender: user?.gender || '',
+            dob: user?.dob || '',
+            nationality: user?.nationality || 'Nigerian',
             phone_number: user?.phone_number || '',
+            alternative_phone_number: user?.alternative_phone_number || '',
             state_of_origin: user?.state_of_origin || '',
             lga: user?.lga || '',
-            residential_address: user?.residential_address || '', // Assuming this field exists in user object
-            guardian_name: user?.student_profile?.guardian_name || '',
-            guardian_phone: user?.student_profile?.guardian_phone || '',
+            residential_address: user?.residential_address || '',
+            city: user?.city || '',
+            state_of_residence: user?.state_of_residence || '',
+            guardian_name: studentProfile.guardian_name || '',
+            guardian_relationship: studentProfile.guardian_relationship || '',
+            guardian_phone: studentProfile.guardian_phone || '',
+            guardian_email: studentProfile.guardian_email || '',
+            guardian_address: studentProfile.guardian_address || '',
         });
         setEditModalVisible(true);
     };
@@ -68,13 +93,13 @@ export default function ProfileScreen() {
         setIsUpdating(true);
         try {
             const response = await api.patch('/profile', editForm);
-            // Update local user state
-            await signIn(response.data.token || null, response.data.user); // Assuming backend returns updated user/token
-            Alert.alert('Success', 'Profile updated successfully');
+            await updateProfile(response.data.user);
             setEditModalVisible(false);
+            Alert.alert('Success', 'Profile updated successfully!');
         } catch (error: any) {
-            console.error('Update failed', error);
-            Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+            console.error('Profile update error:', error?.response?.data || error?.message || error);
+            const msg = error?.response?.data?.error || error?.response?.data?.message || 'Failed to update profile';
+            Alert.alert('Error', msg);
         } finally {
             setIsUpdating(false);
         }
@@ -120,75 +145,26 @@ export default function ProfileScreen() {
 
     const uploadImage = async (base64Image: string) => {
         try {
-            // Optimistic update (optional, but good for UX - though backend returns updated user)
-            // setIsUpdating(true); 
-
             const response = await api.post('/profile/upload-image', {
                 image: `data:image/jpeg;base64,${base64Image}`
             });
 
-            Alert.alert('Success', 'Profile photo updated successfully');
-
-            // Update local user state with the returned user object
+            // Update the user in AuthContext with the returned user (no token change needed)
             if (response.data.user) {
-                // We need the token to keep the session
-                // Since api.post doesn't return the token in this specific response (based on my controller code), 
-                // we might need to rely on the fact that the token shouldn't change. 
-                // But signIn function usually expects a token.
-                // Let's assume we can re-use the current token or just update the user part if AuthContext supports it.
-                // Looking at AuthContext usage in register.tsx: await signIn(token, user);
-                // I need to check if signIn handles just user update or if I need to pass the existing token.
-                // I'll assume I can pass null or undefined for token to keep existing one, OR I should just manually reload the user/context.
-                // But wait, the controller returns { message, user }.
-                // Ideally AuthContext exposes a method to update just the user.
-                // For now, let's try calling signIn with existing token if possible, or just ignore if it requires token.
-                // Actually, useAuth probably has a way to update user. 
-                // If not, I'll just refetch or rely on signIn(null, user) if it supports partial updates (unlikely).
-                // Let's assume I can trigger a reload or something. 
-                // Ah, looking at AuthContext it has `signIn` and `signOut`. 
-                // Maybe I should modify AuthContext to allow `updateUser`?
-                // Or I can just pass the current token if I can access it. `useAuth` returns `user` but not `token` explicitly in the destructuring I see.
-                // Let's check AuthContext content again if needed.
-                // For now, I will assume `signIn` takes (token, user). I don't have the token handy in `user` object usually.
-                // Let's assume `api` client handles the token, so I just need to update the UI.
-                // Use `signIn` with `null` token might wipe it? 
-
-                // Hack: Access token from storage if needed or just pass null and hope `signIn` handles it: 
-                // "context/AuthContext.tsx" -> `const signIn = async (token: string, user: User) => { ... }`
-                // It likely sets the token.
-
-                // Let's just alert for now and reload or maybe I can improve `AuthContext` later to `updateUser`.
-                // Actually, I can pass the user object to `signIn` but what about the token?
-                // The `register.tsx` does `await signIn(token, user)`.
-                // Let's see if I can get the token. 
-                // The `api` library manages token in headers. 
-                // I will add `setUser` to `AuthContext` or similar? 
-                // For now, I'll leave the state update logic simple: 
-                // If specific `updateUser` isn't available, I might struggle to update the context without re-login.
-                // WAIT, `handleUpdateProfile` uses `await signIn(response.data.token || null, response.data.user);`.
-                // So I can pass null? Let's check AuthContext. 
-                // If I pass `null` as token, does it keep the old one?
-                // I'll assume "yes" or that "token" is optional in `signIn` (TS interface said `signIn: (token: string, user: User) => Promise<void>`).
-                // If it's strictly string, null will fail TS.
-                // Let's look at `handleUpdateProfile` again in previous file view.
-                // `await signIn(response.data.token || null, response.data.user);` -> implies it might work.
-
-                // Let's proceed with `signIn(null, response.data.user)`.
-                //Wait, TypeScript might complain if `token` is `string`.
-                // I'll check AuthContext in a sec.
-
-                // For this edit, I'll use `signIn` as `handleUpdateProfile` does.
-                await signIn(response.data.token, response.data.user);
+                await updateProfile(response.data.user);
             }
+
+            Alert.alert('Success', 'Profile photo updated successfully');
         } catch (error: any) {
-            Alert.alert('Error', 'Failed to upload image');
-            console.error(error);
+            console.error('Image upload error:', error?.response?.data || error?.message || error);
+            const msg = error?.response?.data?.error || 'Failed to upload image';
+            Alert.alert('Error', msg);
         }
     };
 
     return (
         <SafeAreaView className="flex-1 bg-white">
-            <ScrollView className="flex-1">
+            <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Profile Header */}
                 <View className="items-center py-10 border-b border-gray-50">
                     <TouchableOpacity onPress={pickImage} className="w-24 h-24 bg-primary rounded-full items-center justify-center shadow-lg mb-4">
@@ -205,7 +181,7 @@ export default function ProfileScreen() {
                             <Camera size={14} color="#002147" />
                         </View>
                     </TouchableOpacity>
-                    <Text className="text-2xl font-bold text-primary">{user?.name}</Text>
+                    <Text className="text-2xl font-bold text-primary">{(user?.surname && user?.first_name) ? `${user.surname} ${user.first_name}` : (user?.name || 'User')}</Text>
                     <Text className="text-gray-400 mt-1">{user?.email}</Text>
                     <View className="bg-primary/5 px-4 py-1 rounded-full mt-3">
                         <Text className="text-primary font-semibold text-xs uppercase tracking-widest">{user?.role}</Text>
@@ -390,59 +366,160 @@ export default function ProfileScreen() {
             </ScrollView>
 
             {/* Edit Profile Modal */}
-            < Modal
+            <Modal
                 animationType="slide"
                 transparent={true}
                 visible={editModalVisible}
-                onRequestClose={() => setEditModalVisible(false)
-                }
+                onRequestClose={() => setEditModalVisible(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
                     className="flex-1"
                 >
                     <View className="flex-1 bg-black/50 justify-end">
-                        <View className="bg-white rounded-t-3xl h-[85%] p-6">
+                        {/* Tap outside to close modal */}
+                        <TouchableWithoutFeedback onPress={() => setEditModalVisible(false)}>
+                            <View className="absolute inset-0" />
+                        </TouchableWithoutFeedback>
+
+                        <View className="bg-white rounded-t-3xl h-[85%] p-6 relative z-10">
                             <View className="flex-row justify-between items-center mb-6">
                                 <Text className="text-xl font-bold text-primary">Edit Profile</Text>
-                                <TouchableOpacity onPress={() => setEditModalVisible(false)} className="p-2 bg-gray-50 rounded-full">
+                                <TouchableOpacity onPress={() => setEditModalVisible(false)} className="p-2 bg-gray-50 rounded-full w-10 h-10 items-center justify-center">
                                     <X size={20} color="#6B7280" />
                                 </TouchableOpacity>
                             </View>
 
-                            <ScrollView showsVerticalScrollIndicator={false}>
+                            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                                 <View className="space-y-4 mb-6">
-                                    <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Personal Info</Text>
+                                    <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Personal Credentials</Text>
+
+                                    <View className="flex-row gap-3">
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Surname</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.surname}
+                                                onChangeText={(text) => setEditForm({ ...editForm, surname: text })}
+                                                placeholder="Surname"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">First Name</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.first_name}
+                                                onChangeText={(text) => setEditForm({ ...editForm, first_name: text })}
+                                                placeholder="First name"
+                                            />
+                                        </View>
+                                    </View>
 
                                     <View>
-                                        <Text className="text-primary font-semibold mb-2 ml-1">Phone Number</Text>
+                                        <Text className="text-primary font-semibold mb-2 ml-1">Other Names</Text>
                                         <TextInput
                                             className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
-                                            value={editForm.phone_number}
-                                            onChangeText={(text) => setEditForm({ ...editForm, phone_number: text })}
-                                            placeholder="080..."
+                                            value={editForm.other_names}
+                                            onChangeText={(text) => setEditForm({ ...editForm, other_names: text })}
+                                            placeholder="Other names"
+                                        />
+                                    </View>
+
+                                    <View className="flex-row gap-3">
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Gender</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.gender}
+                                                onChangeText={(text) => setEditForm({ ...editForm, gender: text })}
+                                                placeholder="Male/Female"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Date of Birth</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.dob}
+                                                onChangeText={(text) => setEditForm({ ...editForm, dob: text })}
+                                                placeholder="YYYY-MM-DD"
+                                            />
+                                        </View>
+                                    </View>
+
+                                    <View className="flex-row gap-3">
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Nationality</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.nationality}
+                                                onChangeText={(text) => setEditForm({ ...editForm, nationality: text })}
+                                                placeholder="Nationality"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Phone Number</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.phone_number}
+                                                onChangeText={(text) => setEditForm({ ...editForm, phone_number: text })}
+                                                placeholder="080..."
+                                                keyboardType="phone-pad"
+                                            />
+                                        </View>
+                                    </View>
+
+                                    <View>
+                                        <Text className="text-primary font-semibold mb-2 ml-1">Alternative Phone</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                            value={editForm.alternative_phone_number}
+                                            onChangeText={(text) => setEditForm({ ...editForm, alternative_phone_number: text })}
+                                            placeholder="Optional alternative phone"
                                             keyboardType="phone-pad"
                                         />
                                     </View>
 
-                                    <View>
-                                        <Text className="text-primary font-semibold mb-2 ml-1">State of Origin</Text>
-                                        <TextInput
-                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
-                                            value={editForm.state_of_origin}
-                                            onChangeText={(text) => setEditForm({ ...editForm, state_of_origin: text })}
-                                            placeholder="Enter state"
-                                        />
+                                    <View className="flex-row gap-3">
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">State of Origin</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.state_of_origin}
+                                                onChangeText={(text) => setEditForm({ ...editForm, state_of_origin: text })}
+                                                placeholder="Enter state"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">LGA</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.lga}
+                                                onChangeText={(text) => setEditForm({ ...editForm, lga: text })}
+                                                placeholder="Enter LGA"
+                                            />
+                                        </View>
                                     </View>
 
-                                    <View>
-                                        <Text className="text-primary font-semibold mb-2 ml-1">LGA</Text>
-                                        <TextInput
-                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
-                                            value={editForm.lga}
-                                            onChangeText={(text) => setEditForm({ ...editForm, lga: text })}
-                                            placeholder="Enter LGA"
-                                        />
+                                    <View className="flex-row gap-3">
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">City</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.city}
+                                                onChangeText={(text) => setEditForm({ ...editForm, city: text })}
+                                                placeholder="City"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">State of Residence</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.state_of_residence}
+                                                onChangeText={(text) => setEditForm({ ...editForm, state_of_residence: text })}
+                                                placeholder="Current state"
+                                            />
+                                        </View>
                                     </View>
 
                                     <View>
@@ -457,16 +534,27 @@ export default function ProfileScreen() {
                                         />
                                     </View>
 
-                                    <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-4 mb-2">Guardian Info</Text>
+                                    <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-6 mb-2">Guardian Information</Text>
 
-                                    <View>
-                                        <Text className="text-primary font-semibold mb-2 ml-1">Guardian Name</Text>
-                                        <TextInput
-                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
-                                            value={editForm.guardian_name}
-                                            onChangeText={(text) => setEditForm({ ...editForm, guardian_name: text })}
-                                            placeholder="Guardian full name"
-                                        />
+                                    <View className="flex-row space-x-4">
+                                        <View className="flex-2 flex-grow">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Guardian Name</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.guardian_name}
+                                                onChangeText={(text) => setEditForm({ ...editForm, guardian_name: text })}
+                                                placeholder="Guardian full name"
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-primary font-semibold mb-2 ml-1">Relationship</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                                value={editForm.guardian_relationship}
+                                                onChangeText={(text) => setEditForm({ ...editForm, guardian_relationship: text })}
+                                                placeholder="e.g. Father"
+                                            />
+                                        </View>
                                     </View>
 
                                     <View>
@@ -479,12 +567,36 @@ export default function ProfileScreen() {
                                             keyboardType="phone-pad"
                                         />
                                     </View>
+
+                                    <View>
+                                        <Text className="text-primary font-semibold mb-2 ml-1">Guardian Email</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary"
+                                            value={editForm.guardian_email}
+                                            onChangeText={(text) => setEditForm({ ...editForm, guardian_email: text })}
+                                            placeholder="guardian@example.com"
+                                            keyboardType="email-address"
+                                            autoCapitalize="none"
+                                        />
+                                    </View>
+
+                                    <View>
+                                        <Text className="text-primary font-semibold mb-2 ml-1">Guardian Address</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary pt-4"
+                                            value={editForm.guardian_address}
+                                            onChangeText={(text) => setEditForm({ ...editForm, guardian_address: text })}
+                                            placeholder="Guardian residential address"
+                                            multiline
+                                            style={{ height: 80, textAlignVertical: 'top' }}
+                                        />
+                                    </View>
                                 </View>
 
                                 <TouchableOpacity
                                     onPress={handleUpdateProfile}
                                     disabled={isUpdating}
-                                    className="bg-primary h-14 rounded-2xl flex-row items-center justify-center shadow-lg shadow-primary/30 mb-8"
+                                    className="bg-primary h-16 rounded-2xl flex-row items-center justify-center shadow-xl shadow-primary/30 mb-8"
                                 >
                                     {isUpdating ? (
                                         <ActivityIndicator color="white" />
@@ -499,7 +611,7 @@ export default function ProfileScreen() {
                         </View>
                     </View>
                 </KeyboardAvoidingView>
-            </Modal >
+            </Modal>
         </SafeAreaView >
     );
 }

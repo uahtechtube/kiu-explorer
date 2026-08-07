@@ -50,45 +50,41 @@ export default function PracticeQuizzesPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* High-Impact Header */}
-            <View className="bg-primary px-6 pt-6 pb-24 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-secondary font-black text-[10px] uppercase tracking-widest mb-1">Self Assessment</Text>
-                        <Text className="text-white text-xl font-bold">Practice Quizzes</Text>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Practice Quizzes</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Self-Assessment & Revision</Text>
                     </View>
-                    <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <History size={20} color="white" />
-                    </TouchableOpacity>
                 </View>
-
-                {/* Hero Stats Card */}
-                <PremiumCard variant="glass" className="p-6 border-white/10 flex-row items-center">
-                    <View className="flex-1">
-                        <View className="flex-row items-center mb-2">
-                            <Trophy size={14} color="#FFD700" />
-                            <Text className="text-white/60 font-black text-[10px] uppercase ml-2 tracking-widest">Mastery Level</Text>
-                        </View>
-                        <Text className="text-white text-3xl font-black">Genius <Text className="text-secondary text-sm">Rank 4</Text></Text>
-                        <Text className="text-white/40 text-[10px] font-bold mt-1 uppercase">12 Quizzes Completed This Semester</Text>
-                    </View>
-                    <View className="w-16 h-16 bg-secondary/80 rounded-full items-center justify-center border-4 border-white/10">
-                        <Zap size={32} color="#002147" />
-                    </View>
-                </PremiumCard>
+                <View className="p-2.5 bg-purple-50 rounded-xl border border-purple-100/60">
+                    <Zap size={20} color="#7C3AED" />
+                </View>
             </View>
 
             <ScrollView
-                className="flex-1 -mt-10 px-6"
+                className="flex-1 px-6 mt-4"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >
+                {/* Hero Stats Card */}
+                <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex-row items-center mb-6">
+                    <View className="flex-1">
+                        <View className="flex-row items-center mb-1">
+                            <Trophy size={14} color="#D97706" />
+                            <Text className="text-gray-400 font-bold text-xs uppercase ml-1.5 tracking-wider">Mastery Level</Text>
+                        </View>
+                        <Text className="text-primary text-2xl font-black">Genius <Text className="text-amber-600 text-xs font-bold">Rank 4</Text></Text>
+                        <Text className="text-gray-400 text-xs font-medium mt-1">12 Quizzes Completed This Semester</Text>
+                    </View>
+                    <View className="w-12 h-12 bg-purple-50 rounded-2xl items-center justify-center border border-purple-100">
+                        <Zap size={24} color="#7C3AED" />
+                    </View>
+                </View>
                 {loading && !quizzes.length ? (
                     <ActivityIndicator size="large" color="#002147" className="mt-20" />
                 ) : (

@@ -56,37 +56,33 @@ export default function EventsPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Premium Header */}
-            <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Social Hub</Text>
-                        <Text className="text-white text-xl font-bold">University Events</Text>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Campus Events</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Seminars, Fairs & Activities</Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => router.push('/events/create')}
-                        className="w-12 h-12 bg-secondary rounded-2xl items-center justify-center shadow-lg shadow-secondary/20"
-                    >
-                        <Plus size={24} color="#002147" />
-                    </TouchableOpacity>
                 </View>
+                <TouchableOpacity onPress={() => router.push('/events/create')} className="p-2.5 bg-blue-50 rounded-xl border border-blue-100/60">
+                    <Plus size={20} color="#002147" />
+                </TouchableOpacity>
+            </View>
 
-                {/* Event Type Filter */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
+            <View className="px-6 pt-4 mb-2">
+                {/* Category Tabs */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
                     {['All', 'Academic', 'Social', 'Career', 'Association'].map((tab) => (
                         <TouchableOpacity
                             key={tab}
                             onPress={() => setActiveTab(tab)}
-                            className={`px-6 py-2.5 rounded-2xl mx-2 border ${activeTab === tab ? 'bg-secondary border-secondary' : 'bg-white/10 border-white/10'
+                            className={`px-5 py-2.5 rounded-2xl mx-1 border ${activeTab === tab ? 'bg-primary border-primary' : 'bg-white border-gray-100'
                                 }`}
                         >
-                            <Text className={`font-black text-[10px] uppercase ${activeTab === tab ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`font-bold text-xs ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>
                                 {tab}
                             </Text>
                         </TouchableOpacity>
@@ -95,7 +91,7 @@ export default function EventsPage() {
             </View>
 
             <ScrollView
-                className="flex-1 -mt-10 px-6"
+                className="flex-1 px-6"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >

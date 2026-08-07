@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { ChevronLeft, Users, FileText, Settings, ShieldAlert, CheckCircle2, XCircle, Trash2, Save, Info, Calendar, Megaphone, Plus, Sparkles, Send } from 'lucide-react-native';
+import { Users, FileText, Settings, ShieldAlert, CheckCircle2, XCircle, Trash2, Save, Info, Calendar, Megaphone, Plus, Sparkles, Send } from 'lucide-react-native';
 import api from '../../../lib/api';
 import { PremiumCard } from '../../../components/shared/PremiumCard';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface PendingRequest {
     id: number;
@@ -278,32 +279,19 @@ export default function AssociationManagePage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Premium Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center">
-                    <TouchableOpacity
-                        onPress={() => {
-                            if (currentView !== 'menu') {
-                                setCurrentView('menu');
-                            } else {
-                                router.back();
-                            }
-                        }}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20 mr-4"
-                    >
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text className="text-secondary font-black text-[10px] uppercase tracking-widest">
-                            {currentView === 'menu' ? 'Executive Panel' : currentView === 'members' ? 'Admissions Governance' : currentView === 'docs' ? 'Official Archives' : currentView === 'announcement' ? 'Broadcast alerts' : 'General Configuration'}
-                        </Text>
-                        <Text className="text-white text-xl font-bold">
-                            {currentView === 'menu' ? 'Executive Board' : currentView === 'members' ? 'Join Requests' : currentView === 'docs' ? 'Archives Registry' : currentView === 'announcement' ? 'Publish Broadcast' : 'Club Settings'}
-                        </Text>
-                    </View>
-                </View>
-            </View>
+            <ScreenHeader
+                title={currentView === 'menu' ? 'Executive Board' : currentView === 'members' ? 'Join Requests' : currentView === 'docs' ? 'Archives Registry' : currentView === 'announcement' ? 'Publish Broadcast' : 'Club Settings'}
+                subtitle={currentView === 'menu' ? 'Executive Panel' : currentView === 'members' ? 'Admissions Governance' : currentView === 'docs' ? 'Official Archives' : currentView === 'announcement' ? 'Broadcast alerts' : 'General Configuration'}
+                onBack={() => {
+                    if (currentView !== 'menu') {
+                        setCurrentView('menu');
+                    } else {
+                        router.back();
+                    }
+                }}
+            />
 
-            <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 60 }}>
+            <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 60 }}>
                 {loading && <ActivityIndicator size="large" color="#002147" className="my-10" />}
 
                 {!loading && currentView === 'menu' && (

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, CreditCard, Download, CheckCircle } from 'lucide-react-native';
+import { CreditCard, Download, CheckCircle } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Transaction {
     id: string;
@@ -76,22 +77,9 @@ export default function PaymentsPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* High-End Header */}
-            <View className="bg-primary px-6 pt-6 pb-10 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center flex-1 mr-12">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Financial Portal</Text>
-                        <Text className="text-white text-xl font-bold">Payment History</Text>
-                    </View>
-                </View>
-            </View>
+            <ScreenHeader title="Payment History" subtitle="Financial Portal" />
 
-            <ScrollView className="flex-1 mt-6 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
                 <View className="flex-row items-center justify-between mb-6">
                     <Text className="text-primary font-black text-xl">Official Receipts</Text>
                     <TouchableOpacity onPress={fetchPayments}>

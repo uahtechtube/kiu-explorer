@@ -96,22 +96,23 @@ export default function AttendancePage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-2xl font-bold">Attendance</Text>
-                        <Text className="text-gray-300 text-sm">Track your efficiency</Text>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Attendance Tracker</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Class Participation & Records</Text>
                     </View>
-                    <TouchableOpacity
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                        onPress={handleExport}
-                    >
-                        <Download size={24} color="white" />
-                    </TouchableOpacity>
                 </View>
+                <TouchableOpacity
+                    className="p-2.5 bg-blue-50 rounded-xl border border-blue-100/60"
+                    onPress={handleExport}
+                >
+                    <Download size={20} color="#002147" />
+                </TouchableOpacity>
             </View>
 
             <ScrollView className="flex-1 px-6 pt-6">

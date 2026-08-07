@@ -93,8 +93,8 @@ export default function NotificationsPage() {
                         <ChevronLeft size={20} color="#002147" />
                     </TouchableOpacity>
                     <View>
-                        <Text className="text-primary text-xl font-black">Inbox</Text>
-                        <Text className="text-gray-400 text-[10px] font-black uppercase tracking-widest mt-0.5">Alerts Center</Text>
+                        <Text className="text-xl font-bold text-primary">Notifications</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Alerts & System Updates</Text>
                     </View>
                 </View>
                 <TouchableOpacity onPress={markAllAsRead} className="flex-row items-center bg-primary/5 px-4 py-2 rounded-xl border border-primary/5">

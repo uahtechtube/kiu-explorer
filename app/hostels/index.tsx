@@ -204,15 +204,17 @@ export default function HostelHub() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            {/* Header */}
-            <View className="px-6 pt-4 pb-4 border-b border-gray-100 flex-row items-center bg-white shadow-sm">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4 w-10 h-10 bg-slate-50 rounded-full items-center justify-center">
-                    <ChevronLeft size={20} color="#0F172A" />
-                </TouchableOpacity>
-                <View className="flex-1">
-                    <Text className="text-primary text-2xl font-black">Hostel Hub</Text>
-                    <Text className="text-gray-400 text-xs">Guidelines, alerts & complaints portal</Text>
+        <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Hostel Portal</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Guidelines, Alerts & Complaints</Text>
+                    </View>
                 </View>
             </View>
 

@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { ChevronLeft, Bell, Calendar, User, ShieldAlert, BookOpen, Globe, Info, Download, Link as LinkIcon } from 'lucide-react-native';
+import { Calendar, User, ShieldAlert, BookOpen, Globe, Info, Download, Link as LinkIcon } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface AnnouncementDetails {
     id: number;
@@ -120,23 +121,7 @@ export default function AnnouncementDetailPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">KIU Circular</Text>
-                        <Text className="text-white text-xl font-bold">News Detail</Text>
-                    </View>
-                    <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <Bell size={22} color="white" />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            <ScreenHeader title="News Detail" subtitle="KIU Circular" />
 
             {loading ? (
                 <View className="flex-1 justify-center items-center">
@@ -145,7 +130,7 @@ export default function AnnouncementDetailPage() {
                 </View>
             ) : announcement ? (
                 <ScrollView
-                    className="flex-1 -mt-10 px-6"
+                    className="flex-1 px-6 pt-4"
                     contentContainerStyle={{ paddingBottom: 60 }}
                     showsVerticalScrollIndicator={false}
                 >

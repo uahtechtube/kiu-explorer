@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Bell, ChevronLeft, AlertCircle, ShieldAlert, BookOpen, Globe, Info } from 'lucide-react-native';
+import { ShieldAlert, BookOpen, Globe, Info, AlertCircle } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Announcement {
     id: number;
@@ -65,26 +66,10 @@ export default function AnnouncementsPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* High-End Header */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">KIU News</Text>
-                        <Text className="text-white text-xl font-bold">Announcements</Text>
-                    </View>
-                    <View className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <Bell size={22} color="white" />
-                    </View>
-                </View>
-            </View>
+            <ScreenHeader title="Announcements" subtitle="KIU News" />
 
             <ScrollView
-                className="flex-1 -mt-8 px-6"
+                className="flex-1 px-6"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >

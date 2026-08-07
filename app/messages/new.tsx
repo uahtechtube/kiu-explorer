@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Search, ChevronLeft, User, Users, Check, UserPlus, MessageSquare, AlertTriangle, Briefcase, GraduationCap } from 'lucide-react-native';
+import { Search, User, Users, Check, UserPlus, MessageSquare, AlertTriangle, Briefcase, GraduationCap } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface SearchedUser {
     id: number;
@@ -123,25 +124,11 @@ export default function NewChatPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Premium Header */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Start Chat</Text>
-                        <Text className="text-white text-xl font-bold">New Message</Text>
-                    </View>
-                    <View className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <User size={22} color="white" />
-                    </View>
-                </View>
+            <ScreenHeader title="New Message" subtitle="Start Chat" />
 
-                {/* ID Lookup Search Bar */}
-                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20">
+            {/* ID Lookup Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-sm border border-gray-100">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchId}
@@ -161,7 +148,7 @@ export default function NewChatPage() {
                 </View>
             </View>
 
-            <ScrollView className="flex-1 px-6 mt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
                 {searching ? (
                     <View className="items-center justify-center py-20">
                         <ActivityIndicator size="large" color="#002147" />

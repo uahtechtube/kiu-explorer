@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Image, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, User, Mail, Phone, Heart, Github, Linkedin, Twitter, Sparkles } from 'lucide-react-native';
+import { User, Mail, Phone, Heart, Github, Linkedin, Twitter, Sparkles } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface DeveloperProfile {
     id: number;
@@ -99,34 +100,20 @@ export default function StudentAboutUs() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Immersive Glassmorphic Header */}
-            <View className="bg-primary px-6 pt-6 pb-24 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-6">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-secondary font-black text-[10px] uppercase tracking-widest mb-1">Meet The Creators</Text>
-                        <Text className="text-white text-xl font-bold">App Developers</Text>
-                    </View>
-                    <View className="w-12 h-12 bg-transparent" />
-                </View>
+            {/* Immersive Header */}
+            <ScreenHeader title="App Developers" subtitle="Meet The Creators" />
 
-                {/* Subtitle */}
-                <View className="flex-row items-center justify-center mt-2 px-6">
-                    <Sparkles size={16} color="#FFD700" />
-                    <Text className="text-white/70 text-xs font-bold text-center ml-2 leading-relaxed">
-                        These are the innovative minds who designed and engineered the KIU Explorer App.
-                    </Text>
-                </View>
+            {/* Subtitle */}
+            <View className="flex-row items-center justify-center mt-2 px-8 mb-2">
+                <Sparkles size={16} color="#FFD700" />
+                <Text className="text-gray-500 text-xs font-bold text-center ml-2 leading-relaxed">
+                    These are the innovative minds who designed and engineered the KIU Explorer App.
+                </Text>
             </View>
 
             {/* Main Cards list */}
             <ScrollView
-                className="flex-1 -mt-12 px-6"
+                className="flex-1 px-6"
                 contentContainerStyle={{ paddingBottom: 60 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
                 showsVerticalScrollIndicator={false}

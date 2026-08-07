@@ -7,7 +7,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: 'student' | 'lecturer' | 'admin';
+    role: 'student' | 'lecturer' | 'admin' | 'management' | 'dean' | 'hod' | string;
     reg_no?: string; // Registration number for students
     permissions?: string[]; // Added for role-based access control
     gender?: string;
@@ -16,12 +16,24 @@ interface User {
     lga?: string;
     passport_photograph?: string;
     residential_address?: string;
+    surname?: string;
+    first_name?: string;
+    other_names?: string;
+    dob?: string;
+    nationality?: string;
+    alternative_phone_number?: string;
+    city?: string;
+    state_of_residence?: string;
+    faculty_id?: number;
+    department_id?: number;
+    studentProfile?: any;
     student_profile?: {
         faculty?: { name: string };
         department?: { name: string };
         level?: string;
         guardian_name?: string;
         guardian_phone?: string;
+        [key: string]: any;
     };
     lecturer_profile?: {
         faculty?: { name: string };
@@ -29,7 +41,9 @@ interface User {
         office_location?: string;
         office_hours?: string;
         specialization?: string;
+        [key: string]: any;
     };
+    [key: string]: any;
 }
 
 interface AuthContextType {
@@ -39,6 +53,7 @@ interface AuthContextType {
     signIn: (token: string | null, user: User) => Promise<void>;
     signOut: () => Promise<void>;
     forceLogout: () => Promise<void>;
+    updateProfile: (updatedUser: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,8 +137,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
     };
 
+    const updateProfile = async (updatedUser: User) => {
+        // Update user data in storage without changing the auth token
+        await storage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, forceLogout }}>
+        <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, forceLogout, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

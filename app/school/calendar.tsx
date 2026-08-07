@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Calendar as CalendarIcon, Clock, MapPin, ChevronRight } from 'lucide-react-native';
+import { Calendar as CalendarIcon, Clock, MapPin, ChevronRight } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface CalendarEvent {
     id: number;
@@ -65,33 +66,21 @@ export default function AcademicCalendarPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Premium Header */}
-            <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">KIU Explorer</Text>
-                        <Text className="text-white text-xl font-bold">Academic Calendar</Text>
-                    </View>
-                    <View className="w-12" />
-                </View>
+            <ScreenHeader title="Academic Calendar" subtitle="KIU Explorer" />
 
-                {/* Glass Month Selector */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-1">
+            {/* Glass Month Selector */}
+            <View className="px-4 py-3">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {months.map((month, index) => (
                         <TouchableOpacity
                             key={month}
                             onPress={() => setSelectedMonth(index)}
                             className={`px-6 py-3 rounded-2xl mr-3 border ${selectedMonth === index
-                                ? 'bg-secondary border-secondary'
-                                : 'bg-white/10 border-white/10'
+                                ? 'bg-primary border-primary'
+                                : 'bg-white border-gray-200'
                                 }`}
                         >
-                            <Text className={`font-bold ${selectedMonth === index ? 'text-primary' : 'text-white/70'}`}>
+                            <Text className={`font-bold ${selectedMonth === index ? 'text-white' : 'text-gray-600'}`}>
                                 {month}
                             </Text>
                         </TouchableOpacity>
@@ -99,7 +88,7 @@ export default function AcademicCalendarPage() {
                 </ScrollView>
             </View>
 
-            <ScrollView className="flex-1 -mt-10 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
                 {loading ? (
                     <ActivityIndicator size="large" color="#002147" className="mt-20" />
                 ) : filteredEvents.length === 0 ? (

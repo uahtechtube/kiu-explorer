@@ -235,7 +235,8 @@ export default function LecturerProfileScreen() {
                 onRequestClose={() => setEditModalVisible(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
                     className="flex-1"
                 >
                     <View className="flex-1 bg-black/50 justify-end">
@@ -247,7 +248,7 @@ export default function LecturerProfileScreen() {
                                 </TouchableOpacity>
                             </View>
 
-                            <ScrollView showsVerticalScrollIndicator={false}>
+                            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                                 <View className="space-y-4 mb-6">
                                     <Text className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Office Info</Text>
 
@@ -298,7 +299,7 @@ export default function LecturerProfileScreen() {
                                 <TouchableOpacity
                                     onPress={handleUpdateProfile}
                                     disabled={isUpdating}
-                                    className="bg-primary h-14 rounded-2xl flex-row items-center justify-center shadow-lg shadow-primary/30 mb-8"
+                                    className="bg-primary h-16 rounded-2xl flex-row items-center justify-center shadow-xl shadow-primary/30 mb-8"
                                 >
                                     {isUpdating ? (
                                         <ActivityIndicator color="white" />

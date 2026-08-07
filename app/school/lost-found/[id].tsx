@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { ChevronLeft, MapPin, Phone, Trash2, Send, CheckCircle2, User, AlertCircle, Calendar, MessageSquare } from 'lucide-react-native';
+import { MapPin, Phone, Trash2, Send, CheckCircle2, User, AlertCircle, Calendar, MessageSquare } from 'lucide-react-native';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../lib/api';
 
@@ -212,23 +213,18 @@ export default function LostFoundDetails() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
-        <View className="bg-primary px-6 pt-4 pb-6 rounded-b-[32px] shadow-md flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-white/10 rounded-full items-center justify-center">
-            <ChevronLeft size={24} color="white" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-bold" numberOfLines={1}>
-            {item.title}
-          </Text>
-          {canManage ? (
-            <TouchableOpacity onPress={handleDeletePost} className="w-10 h-10 bg-rose-500/20 rounded-full items-center justify-center border border-rose-500/20">
-              <Trash2 size={18} color="#FB7185" />
-            </TouchableOpacity>
-          ) : (
-            <View className="w-10" />
-          )}
-        </View>
+        <ScreenHeader
+          title={item.title}
+          rightAction={
+            canManage ? (
+              <TouchableOpacity onPress={handleDeletePost} className="w-10 h-10 bg-rose-500/20 rounded-2xl items-center justify-center border border-rose-500/20">
+                <Trash2 size={18} color="#FB7185" />
+              </TouchableOpacity>
+            ) : undefined
+          }
+        />
 
-        <ScrollView className="flex-1 px-6 mt-4" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1 px-6 pt-2" showsVerticalScrollIndicator={false}>
           {/* Main Info Card */}
           <View className="bg-white p-5 rounded-[32px] border border-gray-100 shadow-sm mb-6">
             {/* Image section */}

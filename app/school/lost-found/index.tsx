@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, TextInput, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Search, Plus, MapPin, Tag, MessageSquare, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react-native';
+import { Search, Plus, MapPin, Tag, MessageSquare, AlertCircle, CheckCircle2 } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface LostItem {
   id: number;
@@ -86,22 +87,16 @@ export default function LostFoundFeed() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View className="bg-primary px-6 pt-4 pb-6 shadow-md rounded-b-[32px]">
-        <View className="flex-row items-center justify-between mb-4">
-          <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-white/10 rounded-full items-center justify-center">
-            <ChevronLeft size={24} color="white" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">Lost & Found</Text>
-          <View className="w-10" />
-        </View>
+      <ScreenHeader title="Lost & Found" />
 
-        {/* Search Bar */}
-        <View className="flex-row items-center bg-white/10 px-4 h-12 rounded-2xl">
-          <Search size={18} color="#9CA3AF" />
+      {/* Search Bar */}
+      <View className="px-4 py-3">
+        <View className="flex-row items-center bg-white px-4 h-12 rounded-2xl border border-gray-100 shadow-sm">
+          <Search size={18} color="#94A3B8" />
           <TextInput
-            className="flex-1 text-white ml-2 h-full"
+            className="flex-1 text-primary ml-2 h-full"
             placeholder="Search laptop, keys, wallet..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}

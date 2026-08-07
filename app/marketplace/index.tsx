@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, FlatList, Image, RefreshControl, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Search, Store, ShoppingBag, ArrowRight, Tag, Phone, MessageCircle, ChevronRight, PlusCircle } from 'lucide-react-native';
+import { Search, Store, ShoppingBag, ArrowRight, Tag, Phone, MessageCircle, ChevronRight, PlusCircle, ChevronLeft } from 'lucide-react-native';
 import api from '../../lib/api';
 
 const { width } = Dimensions.get('window');
@@ -161,16 +161,32 @@ export default function StudentMarketplace() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-            <Stack.Screen options={{ title: 'Student Marketplace', headerShown: true, headerStyle: { backgroundColor: '#002147' }, headerTintColor: '#fff' }} />
+            <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Sub Header & Search Section */}
-            <View className="bg-primary px-6 pb-6 pt-4 rounded-b-[32px] shadow-lg">
-                <View className="flex-row items-center bg-white/10 px-4 h-12 rounded-2xl mb-4">
-                    <Search size={18} color="#9CA3AF" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Marketplace</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Buy & Sell on Campus</Text>
+                    </View>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/marketplace/my-shop')} className="p-2.5 bg-blue-50 rounded-xl border border-blue-100/60 flex-row items-center">
+                    <Store size={18} color="#002147" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Search Section & Tab Switcher */}
+            <View className="px-6 pt-4 mb-2">
+                <View className="bg-white flex-row items-center px-4 py-3 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                    <Search size={18} color="#94A3B8" />
                     <TextInput
-                        className="flex-1 text-white ml-2 h-full text-sm"
+                        className="flex-1 text-primary ml-2 h-full text-sm font-medium"
                         placeholder="Search products or shops..."
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor="#94A3B8"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         onSubmitEditing={handleSearch}
@@ -184,13 +200,13 @@ export default function StudentMarketplace() {
                 </View>
 
                 {/* Tab Switcher */}
-                <View className="flex-row bg-white/5 p-1 rounded-2xl">
+                <View className="flex-row bg-gray-200/60 p-1 rounded-2xl">
                     <TouchableOpacity
                         onPress={() => { setActiveTab('products'); setPage(1); }}
-                        className={`flex-1 py-3 rounded-xl items-center flex-row justify-center ${activeTab === 'products' ? 'bg-secondary' : ''}`}
+                        className={`flex-1 py-2.5 rounded-xl items-center flex-row justify-center ${activeTab === 'products' ? 'bg-white shadow-xs' : ''}`}
                     >
-                        <ShoppingBag size={14} color={activeTab === 'products' ? '#002147' : '#FFFFFF'} />
-                        <Text className={`font-bold text-xs ml-2 ${activeTab === 'products' ? 'text-primary' : 'text-white'}`}>Products</Text>
+                        <ShoppingBag size={14} color={activeTab === 'products' ? '#002147' : '#64748B'} />
+                        <Text className={`font-bold text-xs ml-2 ${activeTab === 'products' ? 'text-primary' : 'text-gray-500'}`}>Products</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => { setActiveTab('shops'); setPage(1); }}

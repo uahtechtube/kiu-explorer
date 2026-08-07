@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Trophy, CheckCircle, XCircle, Clock, FileText, Download, ChevronLeft, Share2, AlertCircle } from 'lucide-react-native';
+import { CheckCircle, XCircle, FileText, Download } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 // @ts-ignore
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -207,22 +208,9 @@ Generated via KIU Explorer
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-2xl font-bold">Exam Results</Text>
-                    </View>
-                    <TouchableOpacity className="w-10 h-10 bg-white/20 rounded-full items-center justify-center">
-                        <Share2 size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
-                </View>
-            </View>
+            <ScreenHeader title="Exam Results" />
 
-            <ScrollView className="flex-1 px-6 pt-6">
+            <ScrollView className="flex-1 px-6 pt-4">
                 {/* Score Card */}
                 <View className="bg-white rounded-3xl p-6 mb-6 shadow-lg border border-gray-100">
                     <View className="items-center mb-6">

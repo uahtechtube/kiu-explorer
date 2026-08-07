@@ -138,7 +138,7 @@ export default function TutorialsScreen() {
 
             <ScrollView
                 className="flex-1 px-6 bg-gray-50/50"
-                contentContainerStyle={{ paddingBottom: 100, paddingTop: 20 }}
+                contentContainerStyle={{ paddingBottom: 120, paddingTop: 20 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >
                 {loading && !tutorials.length ? (

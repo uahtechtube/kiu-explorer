@@ -4,14 +4,54 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { LayoutDashboard, PlayCircle, Users, User, TrendingUp } from 'lucide-react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 
+import { Animated } from 'react-native';
+
+function TabButton({ route, options, isFocused, onPress, label, isCenter }: any) {
+  const scale = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    Animated.spring(scale, {
+      toValue: isFocused ? 1.15 : 1.0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 8,
+    }).start();
+  }, [isFocused]);
+
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={options.tabBarAccessibilityLabel}
+      testID={options.tabBarTestID}
+      onPress={onPress}
+      style={styles.tab}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={[
+        isCenter ? styles.centerIconWrapper : styles.iconWrapper,
+        isCenter ? (isFocused && styles.centerIconWrapperActive) : (isFocused && styles.iconWrapperActive),
+        { transform: [{ scale }] }
+      ]}>
+        {options.tabBarIcon && options.tabBarIcon({
+          focused: isFocused,
+          color: isCenter ? (isFocused ? '#002147' : '#FFFFFF') : (isFocused ? '#002147' : '#94A3B8'),
+          size: isCenter ? 24 : 22
+        })}
+      </Animated.View>
+      <Text style={[styles.label, isFocused && styles.labelActive]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function CustomTabBar({ state, descriptors, navigation }: any) {
   return (
     <View style={styles.container}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
 
-        // This checks if href is explicitly set to null to hide the tab,
-        // and explicitly blocks the "resources" and "two" screens from rendering in the nav bar.
         if (options.href === null || route.name === 'resources' || route.name === 'two') {
           return null;
         }
@@ -24,6 +64,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
               : route.name;
 
         const isFocused = state.index === index;
+        const isCenter = route.name === 'progress';
 
         const onPress = () => {
           const event = navigation.emit({
@@ -38,27 +79,15 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         };
 
         return (
-          <TouchableOpacity
+          <TabButton
             key={route.key}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
-            testID={options.tabBarTestID}
+            route={route}
+            options={options}
+            isFocused={isFocused}
             onPress={onPress}
-            style={styles.tab}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconWrapper, isFocused && styles.iconWrapperActive]}>
-              {options.tabBarIcon && options.tabBarIcon({
-                focused: isFocused,
-                color: isFocused ? '#002147' : '#94A3B8',
-                size: 22
-              })}
-            </View>
-            <Text style={[styles.label, isFocused && styles.labelActive]}>
-              {label}
-            </Text>
-          </TouchableOpacity>
+            label={label}
+            isCenter={isCenter}
+          />
         );
       })}
     </View>
@@ -100,7 +129,7 @@ export default function TabLayout() {
         options={{
           title: 'Progress',
           tabBarIcon: ({ color, focused }) => (
-            <TrendingUp size={focused ? 24 : 22} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <TrendingUp size={focused ? 28 : 26} color={color} strokeWidth={focused ? 2.8 : 2.2} />
           ),
         }}
       />
@@ -123,9 +152,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Add the screens you want to hide below and set href: null.
-        Replace 'hidden-screen-1' with the exact file/folder names that you want to hide.
-      */}
       <Tabs.Screen
         name="resources"
         options={{
@@ -150,17 +176,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)', // Semi-transparent for glass effect
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.5)',
-    paddingBottom: Platform.OS === 'ios' ? 40 : 32, 
-    paddingTop: 24, 
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 28, 
+    paddingTop: 12, 
     paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 20,
-    elevation: 0, // Remove solid android shadows for glass feel
+    elevation: 12,
   },
   tab: {
     flex: 1,
@@ -173,16 +199,36 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6, // Added more space between icon and text
+    marginBottom: 4,
   },
   iconWrapperActive: {
     backgroundColor: '#FFD70020',
   },
+  centerIconWrapper: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#002147',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -34,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    marginBottom: 4,
+  },
+  centerIconWrapperActive: {
+    backgroundColor: '#FFD700',
+  },
   label: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9.5,
+    fontWeight: '800',
     color: '#94A3B8',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   labelActive: {

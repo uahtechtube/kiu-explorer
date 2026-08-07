@@ -7,9 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import {
     Search, BookOpen, Play, Clock, Eye, Youtube,
-    ChevronLeft, BookmarkPlus, CheckCircle, X
+    BookmarkPlus, CheckCircle, X
 } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -275,39 +276,25 @@ export default function TutorialsPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Header */}
-            <View style={{ backgroundColor: '#002147', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                    <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12 }}>
-                        <ChevronLeft size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>Tutorial Library</Text>
-                        <Text style={{ color: '#93c5fd', fontSize: 13 }}>Learn from YouTube & uploaded resources</Text>
-                    </View>
-                </View>
+            <ScreenHeader title="Tutorial Library" subtitle="Learn from YouTube & uploaded resources" />
 
-                {/* Tab Switcher */}
-                <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 4 }}>
+            {/* Tab Switcher */}
+            <View className="px-4 py-3">
+                <View className="flex-row bg-gray-100 p-1 rounded-2xl">
                     <TouchableOpacity
                         onPress={() => setTab('saved')}
-                        style={{
-                            flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
-                            backgroundColor: tab === 'saved' ? '#fff' : 'transparent'
-                        }}
+                        className={`flex-1 py-2.5 rounded-xl items-center ${tab === 'saved' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
                     >
-                        <Text style={{ fontWeight: '700', fontSize: 13, color: tab === 'saved' ? '#002147' : '#93c5fd' }}>
+                        <Text className={`font-bold text-[13px] ${tab === 'saved' ? 'text-primary' : 'text-gray-400'}`}>
                             My Tutorials
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setTab('search')}
-                        style={{
-                            flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
-                            backgroundColor: tab === 'search' ? '#fff' : 'transparent'
-                        }}
+                        className={`flex-1 py-2.5 rounded-xl items-center ${tab === 'search' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
                     >
-                        <Text style={{ fontWeight: '700', fontSize: 13, color: tab === 'search' ? '#002147' : '#93c5fd' }}>
-                            🔍 Search YouTube
+                        <Text className={`font-bold text-[13px] ${tab === 'search' ? 'text-primary' : 'text-gray-400'}`}>
+                            Search YouTube
                         </Text>
                     </TouchableOpacity>
                 </View>

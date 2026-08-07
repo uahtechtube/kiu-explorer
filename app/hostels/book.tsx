@@ -3,8 +3,9 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } fr
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, CheckCircle2, CreditCard, Info, ArrowRight } from 'lucide-react-native';
+import { CheckCircle2, CreditCard, Info, ArrowRight } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 export default function HostelBooking() {
     const { roomId, hostelName, roomNumber, price, serviceFee } = useLocalSearchParams();
@@ -120,14 +121,9 @@ export default function HostelBooking() {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            <View className="px-6 py-4 flex-row items-center border-b border-gray-50">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <ChevronLeft size={24} color="#0F172A" />
-                </TouchableOpacity>
-                <Text className="text-primary text-xl font-bold">Confirm Booking</Text>
-            </View>
+            <ScreenHeader title="Confirm Booking" />
 
-            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+            <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
                 <View className="bg-blue-50/50 p-6 rounded-[32px] border border-blue-100 mb-8">
                     <Text className="text-blue-900/50 font-bold text-xs uppercase mb-1">Accommodation Details</Text>
                     <Text className="text-primary text-2xl font-bold mb-4">{hostelName}</Text>

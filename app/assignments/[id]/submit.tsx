@@ -13,25 +13,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import {
-    ArrowLeft,
     FileUp,
     FileText,
     X,
     Send,
     AlertCircle,
-    CheckCircle2,
     Trash2
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import api from '../../../lib/api';
 import { PremiumCard } from '../../../components/shared/PremiumCard';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 export default function AssignmentSubmission() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
     const [assignment, setAssignment] = useState<any>(null);
     const [submissionText, setSubmissionText] = useState('');
-    const [selectedFile, setSelectedFile] = useState<any>(null);
+    const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -122,16 +121,7 @@ export default function AssignmentSubmission() {
                 className="flex-1"
             >
                 {/* Header */}
-                <View className="px-6 py-4 flex-row items-center justify-between border-b border-gray-50">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center"
-                    >
-                        <ArrowLeft size={20} color="#002147" />
-                    </TouchableOpacity>
-                    <Text className="text-primary font-bold text-lg">Turn In Assignment</Text>
-                    <View className="w-10" />
-                </View>
+                <ScreenHeader title="Turn In Assignment" />
 
                 <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingTop: 24, paddingBottom: 40 }}>
                     {/* Assignment Quick Ref */}
@@ -182,7 +172,7 @@ export default function AssignmentSubmission() {
                                             {selectedFile.name}
                                         </Text>
                                         <Text className="text-gray-400 text-xs">
-                                            {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • File ready
+                                            {(((selectedFile.size || 0) / (1024 * 1024)).toFixed(2))} MB • File ready
                                         </Text>
                                     </View>
                                     <TouchableOpacity

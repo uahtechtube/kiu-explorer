@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, MessageSquare, Globe, Users, Send, AlertTriangle, Layers, Eye } from 'lucide-react-native';
+import { MessageSquare, Globe, Users, Send, AlertTriangle, Layers, Eye } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Association {
     id: number;
@@ -86,24 +87,10 @@ export default function ComposePostPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Compose</Text>
-                        <Text className="text-white text-xl font-bold">New Post</Text>
-                    </View>
-                    <View className="w-12" />
-                </View>
-            </View>
+            <ScreenHeader title="New Post" subtitle="Compose" />
 
             <ScrollView
-                className="flex-1 px-6 mt-4"
+                className="flex-1 px-6 pt-4"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >

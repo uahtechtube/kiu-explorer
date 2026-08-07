@@ -3,8 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndic
 import * as ExpoLinking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Building2, Clock, CheckCircle2, XCircle, CreditCard, X } from 'lucide-react-native';
+import { Building2, Clock, CheckCircle2, XCircle, CreditCard, X } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Booking {
     id: number;
@@ -145,12 +146,7 @@ export default function MyBookings() {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-            <View className="px-6 py-4 flex-row items-center border-b border-gray-50">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
-                    <ChevronLeft size={24} color="#0F172A" />
-                </TouchableOpacity>
-                <Text className="text-primary text-xl font-bold">My Hostel Bookings</Text>
-            </View>
+            <ScreenHeader title="My Hostel Bookings" />
 
             <ScrollView
                 className="flex-1"

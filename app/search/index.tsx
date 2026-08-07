@@ -61,50 +61,45 @@ export default function SearchPage() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* High-End Search Interface */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="flex-1 ml-4 bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20">
-                        <Search size={20} color="#94A3B8" />
-                        <TextInput
-                            value={query}
-                            onChangeText={setQuery}
-                            onSubmitEditing={handleSearch}
-                            placeholder="Find anything..."
-                            placeholderTextColor="#94A3B8"
-                            className="flex-1 ml-3 text-primary font-medium"
-                            autoFocus
-                            returnKeyType="search"
-                        />
-                        {query.length > 0 && (
-                            <TouchableOpacity onPress={() => setQuery('')}>
-                                <X size={16} color="#94A3B8" />
-                            </TouchableOpacity>
-                        )}
-                    </View>
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                    <ChevronLeft size={22} color="#002147" />
+                </TouchableOpacity>
+                <View className="flex-1 bg-gray-50 flex-row items-center px-4 py-2.5 rounded-2xl border border-gray-100">
+                    <Search size={18} color="#94A3B8" />
+                    <TextInput
+                        value={query}
+                        onChangeText={setQuery}
+                        onSubmitEditing={handleSearch}
+                        placeholder="Search resources, services, and more..."
+                        placeholderTextColor="#94A3B8"
+                        className="flex-1 ml-2.5 text-primary text-sm font-medium"
+                        autoFocus
+                        returnKeyType="search"
+                    />
+                    {query.length > 0 && (
+                        <TouchableOpacity onPress={() => setQuery('')}>
+                            <X size={16} color="#94A3B8" />
+                        </TouchableOpacity>
+                    )}
                 </View>
+            </View>
 
+            <View className="px-6 pt-4 mb-2">
                 {/* Filter Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-1">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
                     {filters.map((filter) => (
                         <TouchableOpacity
                             key={filter}
                             onPress={() => setActiveFilter(filter)}
-                            className={`px-5 py-2.5 rounded-full mr-3 border ${activeFilter === filter
-                                    ? 'bg-secondary border-secondary'
-                                    : 'bg-white/10 border-white/10'
+                            className={`px-5 py-2.5 rounded-2xl mx-1 border ${activeFilter === filter ? 'bg-primary border-primary' : 'bg-white border-gray-100'
                                 }`}
                         >
-                            <Text className={`font-black text-[10px] uppercase ${activeFilter === filter ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`font-bold text-xs ${activeFilter === filter ? 'text-white' : 'text-gray-500'}`}>
                                 {filter}
                             </Text>
                         </TouchableOpacity>

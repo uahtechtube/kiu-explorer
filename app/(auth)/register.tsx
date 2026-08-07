@@ -9,6 +9,11 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterScreen() {
     const router = useRouter();
+
+    React.useEffect(() => {
+        router.replace('/login?tab=register');
+    }, []);
+
     const { signIn } = useAuth();
 
     const [step, setStep] = useState(1);
@@ -297,9 +302,16 @@ export default function RegisterScreen() {
         <SafeAreaView className="flex-1 bg-white">
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 20}
                 className="flex-1"
             >
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="px-8">
+                <ScrollView 
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 240 }} 
+                    className="px-8" 
+                    showsVerticalScrollIndicator={false} 
+                    keyboardShouldPersistTaps="handled"
+                    automaticallyAdjustKeyboardInsets={true}
+                >
                     {/* Header */}
                     <View className="flex-row items-center justify-between mt-6">
                         <TouchableOpacity

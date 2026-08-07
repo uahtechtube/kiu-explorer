@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { BookOpen, Search, ChevronRight, Bookmark, Sparkles, ChevronLeft } from 'lucide-react-native';
+import { BookOpen, Search, ChevronRight, Bookmark, Sparkles } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Topic {
     id: number;
@@ -67,26 +68,18 @@ export default function AIStudyTopicsPage() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-6">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-3xl font-bold">Study Topics</Text>
-                        <Text className="text-gray-300 text-sm mt-1">Master your courses with AI</Text>
-                    </View>
-                </View>
+            <ScreenHeader title="Study Topics" subtitle="Master your courses with AI" />
 
-                {/* Search Bar */}
-                <View className="bg-white/10 flex-row items-center px-4 h-12 rounded-2xl">
+            {/* Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-gray-50 flex-row items-center px-4 h-12 rounded-2xl border border-gray-100">
                     <Search size={20} color="#9CA3AF" />
                     <TextInput
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         placeholder="Search topics..."
                         placeholderTextColor="#9CA3AF"
-                        className="flex-1 ml-3 text-white"
+                        className="flex-1 ml-3 text-primary"
                     />
                 </View>
             </View>

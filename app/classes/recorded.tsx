@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Play, Calendar, Clock, Download, FileText, ChevronLeft } from 'lucide-react-native';
+import { Play, Calendar, FileText, Download } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface RecordedClass {
     id: number;
@@ -71,20 +72,12 @@ export default function RecordedClassesPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-3xl font-bold">Recorded Classes</Text>
-                        <Text className="text-gray-300 text-sm mt-1">Watch previous class sessions</Text>
-                    </View>
-                </View>
+            {/* Dashboard-style header */}
+            <ScreenHeader title="Recorded Classes" subtitle="Watch previous class sessions" />
 
-                {/* Filter Chips */}
-                <View className="flex-row space-x-2">
+            {/* Filter Chips */}
+            <View className="px-6 py-4">
+                <View className="flex-row gap-2">
                     {[
                         { key: 'all', label: 'All' },
                         { key: 'recent', label: 'Recent' },
@@ -93,12 +86,13 @@ export default function RecordedClassesPage() {
                         <TouchableOpacity
                             key={item.key}
                             onPress={() => setFilter(item.key as any)}
-                            className={`px-4 py-2 rounded-full ${filter === item.key ? 'bg-secondary' : 'bg-white/20'
+                            className={`px-4 py-2 rounded-full border ${filter === item.key
+                                    ? 'bg-primary border-primary'
+                                    : 'bg-white border-gray-200'
                                 }`}
                         >
                             <Text
-                                className={`text-sm font-semibold ${filter === item.key ? 'text-primary' : 'text-white'
-                                    }`}
+                                className={`text-sm font-semibold ${filter === item.key ? 'text-white' : 'text-gray-500'}`}
                             >
                                 {item.label}
                             </Text>
@@ -109,7 +103,7 @@ export default function RecordedClassesPage() {
 
             {/* Recordings List */}
             <ScrollView
-                className="flex-1 px-6 pt-4"
+                className="flex-1 px-6"
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 {loading ? (

@@ -4,15 +4,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { LogBox } from 'react-native';
 
 // Suppress "Unable to activate keep awake" warnings and promise rejections in development
 LogBox.ignoreLogs(['Unable to activate keep awake']);
-if (typeof global !== 'undefined') {
-  const originalRejectionHandler = (global as any).onunhandledrejection;
-  (global as any).onunhandledrejection = (id: any, error: any) => {
+if (typeof globalThis !== 'undefined') {
+  const originalRejectionHandler = (globalThis as any).onunhandledrejection;
+  (globalThis as any).onunhandledrejection = (id: any, error: any) => {
     if (error && (error.message?.includes('keep awake') || error.message?.includes('KeepAwake'))) {
       return;
     }
@@ -38,14 +38,15 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  // Ensure that initial route defaults to (auth) until authentication is checked.
+  initialRouteName: '(auth)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-import { Platform, Alert } from 'react-native';
+import { Platform, Alert, View, Text, TouchableOpacity, Keyboard, Linking } from 'react-native';
+import { MessageCircle } from 'lucide-react-native';
 import api from '../lib/api';
 
 // Bulletproof notifications token retriever
@@ -63,6 +64,15 @@ async function registerForPushNotificationsAsync() {
     }
 
     const Notifications = require('expo-notifications');
+    
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldMutateNotification: false,
+        shouldBadge: false,
+      }),
+    });
     
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -135,6 +145,49 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+
+  useEffect(() => {
+    // Fetch WhatsApp contact
+    api.get('/school/info')
+      .then(res => {
+        if (res.data && res.data.whatsapp_number) {
+          setWhatsappNumber(res.data.whatsapp_number);
+        }
+      })
+      .catch(err => console.log('Notice: Failed to fetch support number in layout:', err));
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const handleOpenWhatsapp = () => {
+    if (!whatsappNumber) return;
+    const cleanNumber = whatsappNumber.replace(/[^\d]/g, '');
+    const url = `whatsapp://send?phone=${cleanNumber}`;
+    Linking.canOpenURL(url)
+      .then(supported => {
+        if (supported) {
+          return Linking.openURL(url);
+        } else {
+          return Linking.openURL(`https://wa.me/${cleanNumber}`);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+      });
+  };
+
   // Trigger registering push token on login
   useEffect(() => {
     if (user) {
@@ -159,9 +212,16 @@ function RootLayoutNav() {
       router.replace('/(auth)/welcome');
     } else if (user && inAuthGroup) {
       // User authenticated but on auth screen - redirect based on role
-      switch (user.role) {
+      switch (user.role as string) {
         case 'admin':
+        case 'management':
           router.replace('/admin/dashboard');
+          break;
+        case 'dean':
+          router.replace('/dean/dashboard');
+          break;
+        case 'hod':
+          router.replace('/hod/dashboard');
           break;
         case 'lecturer':
           router.replace('/lecturer/dashboard');
@@ -181,12 +241,41 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(association-exec)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(association-exec)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+
+        {whatsappNumber && !keyboardVisible ? (
+          <TouchableOpacity
+            onPress={handleOpenWhatsapp}
+            style={{
+              position: 'absolute',
+              bottom: 30,
+              right: 20,
+              backgroundColor: '#25D366',
+              paddingVertical: 12,
+              paddingHorizontal: 20,
+              borderRadius: 30,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              zIndex: 9999,
+            }}
+            activeOpacity={0.8}
+          >
+            <MessageCircle size={20} color="white" style={{ marginRight: 8 }} />
+            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 15 }}>Get Help</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </ThemeProvider>
   );
 }

@@ -85,46 +85,36 @@ export default function VirtualClassesPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-24 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Digital Campus</Text>
-                        <Text className="text-white text-xl font-bold">E-Classroom</Text>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Virtual Classes</Text>
+                        <Text className="text-gray-400 text-xs font-medium">E-Classroom & Live Lectures</Text>
                     </View>
-                    <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <Info size={20} color="white" />
-                    </TouchableOpacity>
                 </View>
+                <View className="p-2.5 bg-amber-50 rounded-xl border border-amber-100/60">
+                    <Video size={20} color="#D97706" />
+                </View>
+            </View>
 
-                {/* Crystal Tab System */}
-                <View className="flex-row bg-white/5 p-1 rounded-2xl border border-white/10">
+            <View className="px-6 pt-4 mb-2">
+                {/* Dashboard Tab System */}
+                <View className="flex-row bg-gray-200/60 p-1 rounded-2xl">
                     {[
-                        { key: 'live', label: 'Live Now', icon: Circle },
-                        { key: 'upcoming', label: 'Upcoming', icon: Calendar },
-                        { key: 'recorded', label: 'Library', icon: Play },
+                        { key: 'live', label: 'Live Now' },
+                        { key: 'upcoming', label: 'Upcoming' },
+                        { key: 'recorded', label: 'Library' },
                     ].map((tab) => (
                         <TouchableOpacity
                             key={tab.key}
                             onPress={() => setActiveTab(tab.key as any)}
-                            className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${activeTab === tab.key ? 'bg-secondary' : ''
-                                }`}
+                            className={`flex-1 py-2.5 rounded-xl items-center flex-row justify-center ${activeTab === tab.key ? 'bg-white shadow-xs' : ''}`}
                         >
-                            <tab.icon
-                                size={14}
-                                color={activeTab === tab.key ? '#002147' : 'rgba(255,255,255,0.6)'}
-                                fill={tab.key === 'live' && activeTab === tab.key ? '#002147' : 'transparent'}
-                            />
-                            <Text
-                                className={`text-[10px] font-black uppercase ml-2 ${activeTab === tab.key ? 'text-primary' : 'text-white/60'
-                                    }`}
-                            >
+                            <Text className={`font-bold text-xs ${activeTab === tab.key ? 'text-primary' : 'text-gray-500'}`}>
                                 {tab.label}
                             </Text>
                         </TouchableOpacity>
@@ -134,7 +124,7 @@ export default function VirtualClassesPage() {
 
             {/* Class Cards List */}
             <ScrollView
-                className="flex-1 -mt-12 px-6"
+                className="flex-1 px-6"
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >

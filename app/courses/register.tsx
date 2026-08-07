@@ -11,9 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Search, BookOpen, CheckCircle, Plus, Filter, ChevronDown, ChevronLeft } from 'lucide-react-native';
+import { Search, BookOpen, CheckCircle, Plus, Filter, ChevronDown } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Course {
     id: number;
@@ -133,28 +134,16 @@ export default function CourseRegistrationPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center mb-6">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20 mr-4"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text className="text-gray-300 text-xs font-bold uppercase mb-1">Academic Registration</Text>
-                        <Text className="text-white text-2xl font-bold">Course Registration</Text>
-                    </View>
-                </View>
+            <ScreenHeader title="Course Registration" subtitle="Academic Registration" />
 
-                {/* Search Bar */}
-                <View className="bg-white/10 rounded-2xl flex-row items-center px-4 py-3 border border-white/20">
-                    <Search size={20} color="white" />
+            {/* Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-gray-50 rounded-2xl flex-row items-center px-4 py-3 border border-gray-100">
+                    <Search size={20} color="#94A3B8" />
                     <TextInput
                         placeholder="Search courses..."
-                        placeholderTextColor="#CBD5E1"
-                        className="flex-1 ml-3 text-white"
+                        placeholderTextColor="#94A3B8"
+                        className="flex-1 ml-3 text-primary"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />

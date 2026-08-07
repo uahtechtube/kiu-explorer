@@ -80,26 +80,25 @@ export default function DigitalLibraryPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* High-End Academic Header */}
-            <View className="bg-primary px-6 pt-6 pb-24 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-secondary font-black text-[10px] uppercase tracking-widest mb-1">KIU Repository</Text>
-                        <Text className="text-white text-xl font-bold">Digital Library</Text>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Digital Library</Text>
+                        <Text className="text-gray-400 text-xs font-medium">KIU Academic Repository</Text>
                     </View>
-                    <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <Bookmark size={20} color="white" />
-                    </TouchableOpacity>
                 </View>
+                <TouchableOpacity className="p-2 bg-gray-50 rounded-xl">
+                    <Bookmark size={20} color="#002147" />
+                </TouchableOpacity>
+            </View>
 
-                {/* Search & Filter Matrix */}
-                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20 mb-6">
+            <View className="px-6 pt-4">
+                {/* Search Box in Dashboard Card Style */}
+                <View className="bg-white flex-row items-center px-4 py-3 rounded-2xl border border-gray-100 shadow-sm mb-4">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchQuery}
@@ -107,21 +106,21 @@ export default function DigitalLibraryPage() {
                         onSubmitEditing={fetchResources}
                         placeholder="Search textbooks, questions..."
                         placeholderTextColor="#94A3B8"
-                        className="flex-1 ml-3 text-primary font-medium"
+                        className="flex-1 ml-3 text-primary text-sm font-medium"
                     />
                     <Filter size={18} color="#002147" />
                 </View>
 
                 {/* Category Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-2 mb-4">
                     {categories.map((cat) => (
                         <TouchableOpacity
                             key={cat}
                             onPress={() => setSelectedCategory(cat)}
-                            className={`px-6 py-2.5 rounded-2xl mx-2 border ${selectedCategory === cat ? 'bg-secondary border-secondary' : 'bg-white/10 border-white/10'
+                            className={`px-5 py-2.5 rounded-2xl mx-1 border ${selectedCategory === cat ? 'bg-primary border-primary' : 'bg-white border-gray-100'
                                 }`}
                         >
-                            <Text className={`font-black text-[10px] uppercase ${selectedCategory === cat ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`font-bold text-xs ${selectedCategory === cat ? 'text-white' : 'text-gray-500'}`}>
                                 {cat}
                             </Text>
                         </TouchableOpacity>
@@ -130,7 +129,7 @@ export default function DigitalLibraryPage() {
             </View>
 
             <ScrollView
-                className="flex-1 -mt-12 px-6"
+                className="flex-1 px-6"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >

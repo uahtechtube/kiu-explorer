@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Plus, Trash2, Edit, Award, BookOpen, BarChart2, TrendingUp } from 'lucide-react-native';
+import { Plus, Trash2, Edit, Award, BookOpen, BarChart2, TrendingUp } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface GpaEntry {
     id: number;
@@ -177,29 +178,23 @@ export default function GpaCalculatorScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Academic</Text>
-                        <Text className="text-white text-xl font-bold">GPA Calculator</Text>
-                    </View>
+            <ScreenHeader
+                title="GPA Calculator"
+                subtitle="Academic"
+                rightAction={
                     <TouchableOpacity
                         onPress={handleOpenAddModal}
-                        className="w-12 h-12 bg-secondary rounded-2xl items-center justify-center shadow-md shadow-secondary/10"
+                        className="w-10 h-10 bg-secondary rounded-2xl items-center justify-center"
                     >
                         <Plus size={22} color="#002147" />
                     </TouchableOpacity>
-                </View>
+                }
+            />
 
-                {/* CGPA Display Card */}
+            {/* CGPA Display Card */}
+            <View className="px-6 pt-2">
                 {summary && (
-                    <View className="bg-white rounded-[28px] mt-6 p-5 shadow-xl flex-row items-center justify-between border border-gray-100">
+                    <View className="bg-white rounded-[28px] p-5 shadow-sm flex-row items-center justify-between border border-gray-100">
                         <View className="flex-1 mr-3">
                             <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Cumulative GPA</Text>
                             <Text className="text-primary text-3xl font-black mt-1">{(summary.cgpa || 0.00).toFixed(2)}</Text>

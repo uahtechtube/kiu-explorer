@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, Image } from 'react-native';
 
-const LogoImage = require('../assets/images/logo.jpg');
+const LogoImage = require('../assets/images/logo.png');
 
 export default function LoadingScreen() {
     return (

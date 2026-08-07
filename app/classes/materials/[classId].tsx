@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { FileText, Download, Eye, ChevronLeft, File, Image, Video } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { FileText, Download, Eye, File, Image, Video } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface Material {
     id: number;
@@ -23,7 +24,6 @@ interface ClassInfo {
 }
 
 export default function ClassMaterialsPage() {
-    const router = useRouter();
     const { classId } = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
     const [classInfo, setClassInfo] = useState<ClassInfo | null>(null);
@@ -115,25 +115,8 @@ export default function ClassMaterialsPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-2xl font-bold">Class Materials</Text>
-                    </View>
-                </View>
-
-                {classInfo && (
-                    <View className="bg-white/10 p-4 rounded-2xl">
-                        <Text className="text-white font-bold text-lg mb-1">{classInfo.title}</Text>
-                        <Text className="text-gray-300 text-sm">{classInfo.course_code}</Text>
-                        <Text className="text-gray-400 text-xs mt-1">{classInfo.lecturer_name}</Text>
-                    </View>
-                )}
-            </View>
+            {/* Dashboard-style header */}
+            <ScreenHeader title="Class Materials" subtitle={classInfo ? `${classInfo.course_code} • ${classInfo.title}` : 'Downloadable files'} />
 
             {/* Materials List */}
             <ScrollView className="flex-1 px-6 pt-4">

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Brain, BookOpen, Calculator, Code, Globe, ChevronLeft, Play } from 'lucide-react-native';
+import { Brain, BookOpen, Calculator, Code, Globe, Play } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface QuizCategory {
     id: number;
@@ -84,20 +85,10 @@ export default function PracticeQuizzesPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-3xl font-bold">Practice Quizzes</Text>
-                        <Text className="text-gray-300 text-sm mt-1">Test your knowledge anytime</Text>
-                    </View>
-                </View>
-            </View>
+            {/* Dashboard-style header */}
+            <ScreenHeader title="Practice Quizzes" subtitle="Test your knowledge anytime" />
 
-            <ScrollView className="flex-1 px-6 pt-6">
+            <ScrollView className="flex-1 px-6 pt-4">
                 {loading ? (
                     <View className="flex-1 items-center justify-center py-20">
                         <ActivityIndicator size="large" color="#002147" />

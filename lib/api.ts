@@ -8,9 +8,9 @@ import { Platform } from 'react-native';
 // Look for IPv4 Address under your active network adapter (e.g., 192.168.1.10)
 
 // Set this to true to connect to your live hosted server, or false for local development
-const USE_PRODUCTION = true;
+const USE_PRODUCTION = false;
 
-const YOUR_COMPUTER_IP = '192.168.115.249'; // UPDATE THIS with your actual IP if different
+const YOUR_COMPUTER_IP = '192.168.9.249'; // Active Wi-Fi local IPv4 address for Expo Go testing
 
 const getBaseUrl = () => {
     if (USE_PRODUCTION) {

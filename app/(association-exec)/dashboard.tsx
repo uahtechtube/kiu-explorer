@@ -12,8 +12,7 @@ import {
     Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import {
     ChevronLeft,
@@ -100,6 +99,7 @@ export default function AssociationExecDashboard() {
     };
 
     const fetchData = async () => {
+        if (!associationId) return;
         try {
             setLoading(true);
             // 1. Fetch Association Members

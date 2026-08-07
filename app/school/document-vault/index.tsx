@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput, RefreshControl, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Lock, Unlock, Pin, Plus, Trash2, Eye, Download, Search, ShieldCheck, ShieldAlert, Key, FileText, Check, MoreVertical } from 'lucide-react-native';
+import { Lock, Unlock, Pin, Plus, Trash2, Eye, Download, Search, ShieldCheck, ShieldAlert, Key, FileText, Check, MoreVertical } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface VaultDoc {
     id: number;
@@ -540,45 +541,36 @@ export default function DocumentVaultScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center flex-row">
-                        <ShieldCheck size={20} color="#F59E0B" className="mr-1.5" />
-                        <Text className="text-white text-xl font-bold">Document Vault</Text>
-                    </View>
+            <ScreenHeader
+                title="Document Vault"
+                rightAction={
                     <TouchableOpacity
                         onPress={handleManualLock}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
+                        className="w-10 h-10 bg-secondary rounded-2xl items-center justify-center"
                     >
-                        <Lock size={20} color="white" />
+                        <Lock size={20} color="#002147" />
                     </TouchableOpacity>
+                }
+            />
+
+            {/* Info Note and Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-white/80 border border-gray-100 p-3 rounded-2xl flex-row items-center mb-3">
+                    <ShieldCheck size={16} color="#10B981" />
+                    <Text className="text-gray-500 text-[10px] ml-2 flex-1">
+                        Your vault files are fully encrypted before saving. Decryption occurs on request.
+                    </Text>
                 </View>
 
-                {/* Info Note and Search Bar */}
-                <View className="mt-5">
-                    <View className="bg-white/10 border border-white/10 p-3 rounded-2xl flex-row items-center mb-4">
-                        <ShieldCheck size={16} color="#10B981" />
-                        <Text className="text-white/80 text-[10px] ml-2 flex-1">
-                            Your vault files are fully encrypted before saving. Decryption occurs on request.
-                        </Text>
-                    </View>
-
-                    <View className="bg-white rounded-2xl flex-row items-center px-4 h-12 border border-gray-100 shadow-sm">
-                        <Search size={18} color="#94A3B8" />
-                        <TextInput
-                            placeholder="Search document title or file name..."
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            placeholderTextColor="#94A3B8"
-                            className="flex-1 text-primary text-sm font-semibold ml-3"
-                        />
-                    </View>
+                <View className="bg-white rounded-2xl flex-row items-center px-4 h-12 border border-gray-100 shadow-sm">
+                    <Search size={18} color="#94A3B8" />
+                    <TextInput
+                        placeholder="Search document title or file name..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        placeholderTextColor="#94A3B8"
+                        className="flex-1 text-primary text-sm font-semibold ml-3"
+                    />
                 </View>
             </View>
 

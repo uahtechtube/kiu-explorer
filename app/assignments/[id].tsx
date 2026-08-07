@@ -3,16 +3,15 @@ import { View, Text, ScrollView, TouchableOpacity, Linking, ActivityIndicator } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import {
-    ArrowLeft,
     Calendar,
     FileText,
     Download,
-    HelpCircle,
     FileCheck
 } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 export default function AssignmentDetail() {
     const { id } = useLocalSearchParams();
@@ -51,18 +50,7 @@ export default function AssignmentDetail() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Custom Header */}
-            <View className="px-6 py-4 flex-row items-center justify-between border-b border-gray-50">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center"
-                >
-                    <ArrowLeft size={20} color="#002147" />
-                </TouchableOpacity>
-                <Text className="text-primary font-bold text-lg">Assignment Detail</Text>
-                <TouchableOpacity className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center">
-                    <HelpCircle size={20} color="#64748B" />
-                </TouchableOpacity>
-            </View>
+            <ScreenHeader title="Assignment Detail" />
 
             <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 120 }}>
                 {/* Title & Status */}

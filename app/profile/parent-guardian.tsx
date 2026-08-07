@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Plus, Trash2, Edit2, Shield, Phone, Mail, MapPin, Briefcase } from 'lucide-react-native';
+import { Plus, Trash2, Edit2, Shield, Phone, Mail, MapPin, Briefcase } from 'lucide-react-native';
 import api from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface ParentGuardian {
     id: number;
@@ -148,28 +149,20 @@ export default function ParentGuardianScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Student</Text>
-                        <Text className="text-white text-xl font-bold">Parents & Guardians</Text>
-                    </View>
+            <ScreenHeader
+                title="Parents & Guardians"
+                subtitle="Student"
+                rightAction={
                     <TouchableOpacity
                         onPress={openAddModal}
-                        className="w-12 h-12 bg-secondary rounded-2xl items-center justify-center shadow-md shadow-secondary/10"
+                        className="w-10 h-10 bg-secondary rounded-2xl items-center justify-center"
                     >
                         <Plus size={22} color="#002147" />
                     </TouchableOpacity>
-                </View>
-            </View>
+                }
+            />
 
-            <ScrollView className="flex-1 px-6 mt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView className="flex-1 px-6 pt-4" contentContainerStyle={{ paddingBottom: 40 }}>
                 {loading ? (
                     <ActivityIndicator size="large" color="#002147" className="mt-10" />
                 ) : parents.length === 0 ? (

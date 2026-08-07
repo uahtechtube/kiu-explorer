@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl, Modal, Alert, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { 
@@ -325,6 +325,7 @@ export default function SocialHubScreen() {
 
             <ScrollView
                 className="flex-1 bg-gray-50"
+                contentContainerStyle={{ paddingBottom: 120 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >
                 {/* Feed */}
@@ -431,8 +432,13 @@ export default function SocialHubScreen() {
                 transparent
                 onRequestClose={() => setActionModalVisible(false)}
             >
-                <View className="flex-1 bg-black/40 justify-end">
-                    <View className="bg-white rounded-t-[32px] p-6 pb-8 border border-gray-100">
+                <View className="flex-row justify-between items-center mb-4">
+                    {/* Tap outside to close overlay */}
+                    <TouchableWithoutFeedback onPress={() => setActionModalVisible(false)}>
+                        <View className="absolute inset-0" />
+                    </TouchableWithoutFeedback>
+                    
+                    <View className="bg-white rounded-t-[32px] p-6 pb-8 border border-gray-100 w-full relative z-10">
                         <View className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
                         <Text className="text-primary font-black text-center text-xs uppercase tracking-widest mb-6">Post Options</Text>
                         
@@ -441,7 +447,7 @@ export default function SocialHubScreen() {
                                 {user && (activeActionPost.user.id === user.id || user.role === 'admin') ? (
                                     <TouchableOpacity 
                                         onPress={() => handleDeletePost(activeActionPost.id)}
-                                        className="bg-red-50 flex-row items-center p-4 rounded-2xl border border-red-100"
+                                        className="bg-red-50 flex-row items-center h-14 px-4 rounded-2xl border border-red-100"
                                     >
                                         <ShieldAlert size={18} color="#EF4444" />
                                         <Text className="text-red-700 font-bold text-sm ml-3">Delete Post Permanently</Text>
@@ -452,7 +458,7 @@ export default function SocialHubScreen() {
                                             setActionModalVisible(false);
                                             setReportingPost(activeActionPost);
                                         }}
-                                        className="bg-amber-50 flex-row items-center p-4 rounded-2xl border border-amber-100"
+                                        className="bg-amber-50 flex-row items-center h-14 px-4 rounded-2xl border border-amber-100"
                                     >
                                         <ShieldAlert size={18} color="#D97706" />
                                         <Text className="text-amber-800 font-bold text-sm ml-3">Report Inappropriate Content</Text>
@@ -461,7 +467,7 @@ export default function SocialHubScreen() {
 
                                 <TouchableOpacity 
                                     onPress={() => setActionModalVisible(false)}
-                                    className="bg-gray-100 items-center justify-center p-4 rounded-2xl border border-gray-200 mt-2"
+                                    className="bg-gray-100 items-center justify-center h-14 rounded-2xl border border-gray-200 mt-2"
                                 >
                                     <Text className="text-gray-700 font-bold text-sm">Cancel</Text>
                                 </TouchableOpacity>
@@ -479,7 +485,12 @@ export default function SocialHubScreen() {
                 onRequestClose={() => setReportingPost(null)}
             >
                 <View className="flex-1 bg-black/60 justify-center px-6">
-                    <View className="bg-white rounded-[32px] p-6 shadow-2xl border border-gray-100">
+                    {/* Tap outside to close overlay */}
+                    <TouchableWithoutFeedback onPress={() => setReportingPost(null)}>
+                        <View className="absolute inset-0" />
+                    </TouchableWithoutFeedback>
+
+                    <View className="bg-white rounded-[32px] p-6 shadow-2xl border border-gray-100 relative z-10">
                         <View className="flex-row justify-between items-center mb-4">
                             <Text className="text-primary font-black text-lg">Report Moment</Text>
                             <TouchableOpacity onPress={() => setReportingPost(null)} className="p-1 bg-gray-100 rounded-full">
@@ -501,14 +512,14 @@ export default function SocialHubScreen() {
                         <View className="flex-row space-x-3">
                             <TouchableOpacity 
                                 onPress={() => setReportingPost(null)}
-                                className="flex-1 bg-gray-100 rounded-xl py-3.5 items-center justify-center border border-gray-200"
+                                className="flex-1 bg-gray-100 rounded-xl h-14 items-center justify-center border border-gray-200"
                             >
                                 <Text className="text-gray-700 font-bold text-xs uppercase tracking-wider">Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 onPress={handleReportSubmit}
                                 disabled={submittingReport || !reportReason.trim()}
-                                className={`flex-1 rounded-xl py-3.5 items-center justify-center ${submittingReport || !reportReason.trim() ? 'bg-gray-200' : 'bg-primary'}`}
+                                className={`flex-1 rounded-xl h-14 items-center justify-center ${submittingReport || !reportReason.trim() ? 'bg-gray-200' : 'bg-primary'}`}
                             >
                                 {submittingReport ? (
                                     <ActivityIndicator size="small" color="white" />
@@ -529,7 +540,12 @@ export default function SocialHubScreen() {
                 onRequestClose={() => setCommentModalVisible(false)}
             >
                 <View className="flex-1 bg-black/60 justify-end">
-                    <View className="bg-white rounded-t-[40px] h-[80%] shadow-2xl">
+                    {/* Tap outside to close overlay */}
+                    <TouchableWithoutFeedback onPress={() => { setCommentModalVisible(false); setSelectedPost(null); }}>
+                        <View className="absolute inset-0" />
+                    </TouchableWithoutFeedback>
+
+                    <View className="bg-white rounded-t-[40px] h-[80%] shadow-2xl relative z-10">
                         
                         {/* Modal Header */}
                         <View className="px-6 py-5 border-b border-gray-100 flex-row justify-between items-center">

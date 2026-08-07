@@ -54,49 +54,49 @@ export default function AssignmentIndex() {
                 }}
             />
 
-            {/* Header Section */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center flex-1">
-                        <TouchableOpacity
-                            onPress={() => router.back()}
-                            className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20 mr-4"
-                        >
-                            <ChevronLeft size={24} color="white" />
-                        </TouchableOpacity>
-                        <View className="flex-1">
-                            <Text className="text-gray-300 text-sm font-medium">My Academics</Text>
-                            <Text className="text-white text-2xl font-bold" numberOfLines={1}>Assignments</Text>
-                        </View>
-                    </View>
-                    <TouchableOpacity
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20 ml-2"
-                        onPress={() => router.push('/search')}
-                    >
-                        <Search size={22} color="white" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Assignments</Text>
+                        <Text className="text-gray-400 text-xs font-medium">My Coursework & Deadlines</Text>
+                    </View>
+                </View>
+                <TouchableOpacity
+                    className="p-2 bg-gray-50 rounded-xl"
+                    onPress={() => router.push('/search')}
+                >
+                    <Search size={20} color="#002147" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Quick Stats in Dashboard Card Style */}
+            <View className="px-6 mt-4 flex-row gap-3">
+                <View className="flex-1 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <View className="flex-row items-center mb-1">
+                        <View className="w-7 h-7 bg-amber-50 rounded-lg items-center justify-center mr-2">
+                            <Clock size={14} color="#D97706" />
+                        </View>
+                        <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Pending</Text>
+                    </View>
+                    <Text className="text-primary font-black text-2xl mt-1">
+                        {assignments.filter(a => a.status === 'pending').length}
+                    </Text>
                 </View>
 
-                {/* Quick Stats in Header */}
-                <View className="flex-row mt-8 space-x-3">
-                    <View className="flex-1 bg-white/10 rounded-2xl p-3 border border-white/10">
-                        <View className="flex-row items-center mb-1">
-                            <Clock size={14} color="#FFD700" />
-                            <Text className="text-white/60 text-[10px] uppercase font-bold ml-1.5">Pending</Text>
+                <View className="flex-1 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <View className="flex-row items-center mb-1">
+                        <View className="w-7 h-7 bg-emerald-50 rounded-lg items-center justify-center mr-2">
+                            <CheckCircle2 size={14} color="#16A34A" />
                         </View>
-                        <Text className="text-white text-xl font-bold">
-                            {assignments.filter(a => a.status === 'pending').length}
-                        </Text>
+                        <Text className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Graded</Text>
                     </View>
-                    <View className="flex-1 bg-white/10 rounded-2xl p-3 border border-white/10">
-                        <View className="flex-row items-center mb-1">
-                            <CheckCircle2 size={14} color="#10B981" />
-                            <Text className="text-white/60 text-[10px] uppercase font-bold ml-1.5">Graded</Text>
-                        </View>
-                        <Text className="text-white text-xl font-bold">
-                            {assignments.filter(a => a.status === 'graded').length}
-                        </Text>
-                    </View>
+                    <Text className="text-primary font-black text-2xl mt-1">
+                        {assignments.filter(a => a.status === 'graded').length}
+                    </Text>
                 </View>
             </View>
 

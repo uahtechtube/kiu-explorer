@@ -3,7 +3,6 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndic
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     TrendingUp,
-    Award,
     Users,
     Clock,
     BookOpen,
@@ -15,6 +14,7 @@ import {
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
 import { ProgressCard } from '../../components/shared/ProgressCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 export default function ProgressDashboard() {
     const [refreshing, setRefreshing] = useState(false);
@@ -61,50 +61,41 @@ export default function ProgressDashboard() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <ScrollView
                 className="flex-1"
+                contentContainerStyle={{ paddingBottom: 120 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 {/* Profile/Header Section */}
-                <View className="bg-primary px-6 pt-6 pb-16 rounded-b-[40px] shadow-lg">
-                    <View className="flex-row items-center justify-between mb-8">
+                <ScreenHeader title="My Stats" subtitle="Academic Performance" />
+
+                {/* Overall GPA / Performance Score Card */}
+                <View className="mx-6 mt-2 bg-primary rounded-[32px] p-6 border border-primary/20 shadow-lg shadow-primary/10">
+                    <View className="flex-row items-center justify-between">
                         <View>
-                            <Text className="text-gray-300 text-sm font-medium">Academic Performance</Text>
-                            <Text className="text-white text-3xl font-bold">My Stats</Text>
+                            <Text className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">
+                                Cumulative Performance
+                            </Text>
+                            <View className="flex-row items-baseline">
+                                <Text className="text-white text-4xl font-black">{averageScore}</Text>
+                                <Text className="text-white/40 text-lg font-bold"> / 100</Text>
+                            </View>
                         </View>
-                        <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                            <Award size={24} color="#FFD700" />
-                        </TouchableOpacity>
+                        <View className="bg-secondary p-4 rounded-[24px] shadow-lg shadow-secondary/20">
+                            <TrendingUp size={30} color="#FFFFFF" />
+                        </View>
                     </View>
 
-                    {/* Overall GPA / Performance Score Card */}
-                    <PremiumCard variant="glass" className="p-6">
-                        <View className="flex-row items-center justify-between">
-                            <View>
-                                <Text className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">
-                                    Cumulative Performance
-                                </Text>
-                                <View className="flex-row items-baseline">
-                                    <Text className="text-white text-4xl font-black">{averageScore}</Text>
-                                    <Text className="text-white/40 text-lg font-bold"> / 100</Text>
-                                </View>
-                            </View>
-                            <View className="bg-secondary p-4 rounded-[24px] shadow-lg shadow-secondary/20">
-                                <TrendingUp size={30} color="#FFFFFF" />
-                            </View>
+                    <View className="mt-6 flex-row items-center">
+                        <View className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
+                            <View className="h-full bg-secondary" style={{ width: `${averageScore}%` as any }} />
                         </View>
-
-                        <View className="mt-6 flex-row items-center">
-                            <View className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
-                                <View className="h-full bg-secondary" style={{ width: `${averageScore}%` as any }} />
-                            </View>
-                            <Text className="text-white/80 text-xs font-bold ml-4">
-                                {parseFloat(averageScore) >= 50 ? 'On Track' : 'Needs Focus'}
-                            </Text>
-                        </View>
-                    </PremiumCard>
+                        <Text className="text-white/80 text-xs font-bold ml-4">
+                            {parseFloat(averageScore) >= 50 ? 'On Track' : 'Needs Focus'}
+                        </Text>
+                    </View>
                 </View>
 
                 {/* Primary Metrics Grid */}
-                <View className="px-5 -mt-8">
+                <View className="px-5 pt-6">
                     <View className="flex-row">
                         <ProgressCard
                             label="Attendance"

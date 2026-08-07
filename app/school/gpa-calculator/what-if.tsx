@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Plus, Trash2, HelpCircle, BarChart2, Star, CheckCircle, Info } from 'lucide-react-native';
+import { Plus, Trash2, HelpCircle, BarChart2, Star, CheckCircle, Info } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface SimulatedCourse {
     id: number;
@@ -165,24 +166,12 @@ export default function GpaWhatIfScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Immersive Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Simulator</Text>
-                        <Text className="text-white text-xl font-bold">"What If" Simulator</Text>
-                    </View>
-                    <View className="w-12" />
-                </View>
+            <ScreenHeader title={`"What If" Simulator`} subtitle="Simulator" />
 
-                {/* CGPA Side-by-Side Comparison */}
+            {/* CGPA Side-by-Side Comparison */}
+            <View className="px-6 pt-2">
                 {baseline && (
-                    <View className="bg-white rounded-[28px] mt-6 p-5 shadow-xl border border-gray-100">
+                    <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
                         <View className="flex-row justify-around items-center py-2">
                             <View className="items-center flex-1">
                                 <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Current CGPA</Text>
@@ -221,7 +210,7 @@ export default function GpaWhatIfScreen() {
                 )}
             </View>
 
-            <ScrollView className="flex-1 px-6 mt-6" contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 40 }}>
                 {loading ? (
                     <ActivityIndicator size="large" color="#002147" className="mt-10" />
                 ) : (

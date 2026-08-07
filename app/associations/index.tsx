@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Users, Search, ChevronLeft, ArrowRight, ShieldCheck, Plus, X, BookOpen, Calendar, AlignLeft, Info } from 'lucide-react-native';
+import { Users, Search, ArrowRight, ShieldCheck, Plus, X, BookOpen, Calendar, AlignLeft, Info } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface Association {
     id: number;
@@ -124,25 +125,11 @@ export default function AssociationsPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Premium Corporate Header */}
-            <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Community Hub</Text>
-                        <Text className="text-white text-xl font-bold">Associations</Text>
-                    </View>
-                    <TouchableOpacity className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <Users size={22} color="white" />
-                    </TouchableOpacity>
-                </View>
+            <ScreenHeader title="Associations" subtitle="Community Hub" />
 
-                {/* Sub-Header Tabs */}
-                <View className="flex-row bg-white/5 p-1 rounded-2xl border border-white/10 mb-6">
+            {/* Sub-Header Tabs */}
+            <View className="px-4 py-3">
+                <View className="flex-row bg-gray-50 p-1 rounded-2xl border border-gray-100 mb-3">
                     {['Discover', 'My Clubs'].map((tab) => (
                         <TouchableOpacity
                             key={tab}
@@ -150,7 +137,7 @@ export default function AssociationsPage() {
                             className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${activeTab === tab ? 'bg-secondary' : ''
                                 }`}
                         >
-                            <Text className={`text-[10px] font-black uppercase ${activeTab === tab ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`text-[10px] font-black uppercase ${activeTab === tab ? 'text-primary' : 'text-gray-500'}`}>
                                 {tab}
                             </Text>
                         </TouchableOpacity>
@@ -158,7 +145,7 @@ export default function AssociationsPage() {
                 </View>
 
                 {/* Professional Search Bar */}
-                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20">
+                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-sm border border-gray-100">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchQuery}
@@ -171,7 +158,7 @@ export default function AssociationsPage() {
             </View>
 
             <ScrollView
-                className="flex-1 -mt-10 px-6"
+                className="flex-1 px-6"
                 contentContainerStyle={{ paddingBottom: 100 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#002147" />}
             >

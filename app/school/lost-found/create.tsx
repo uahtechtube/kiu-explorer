@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Camera, Check, MapPin, Phone, User, FileText } from 'lucide-react-native';
+import { Camera, Check, MapPin, Phone, User, FileText } from 'lucide-react-native';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../../context/AuthContext';
 import api from '../../../lib/api';
@@ -91,15 +92,9 @@ export default function ReportLostFoundItem() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View className="bg-primary px-6 pt-4 pb-6 rounded-b-[32px] shadow-md flex-row items-center justify-between">
-        <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 bg-white/10 rounded-full items-center justify-center">
-          <ChevronLeft size={24} color="white" />
-        </TouchableOpacity>
-        <Text className="text-white text-xl font-bold">Report Item</Text>
-        <View className="w-10" />
-      </View>
+      <ScreenHeader title="Report Item" />
 
-      <ScrollView className="flex-1 px-6 mt-6" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1 px-6 pt-4" showsVerticalScrollIndicator={false}>
         {/* Toggle Type */}
         <View className="flex-row bg-gray-100 p-1.5 rounded-2xl mb-6">
           <TouchableOpacity

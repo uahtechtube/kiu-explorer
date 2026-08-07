@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Camera, Image as ImageIcon, Send, Calculator, ChevronLeft, X } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, Send, Calculator, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 export default function AIHomeworkHelpPage() {
     const insets = useSafeAreaInsets();
@@ -80,19 +81,9 @@ export default function AIHomeworkHelpPage() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-2">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-2xl font-bold">Homework Help</Text>
-                        <Text className="text-gray-300 text-sm">Snap a photo or type your problem</Text>
-                    </View>
-                </View>
-            </View>
+            <ScreenHeader title="Homework Help" subtitle="Snap a photo or type your problem" />
 
-            <ScrollView className="flex-1 px-6 pt-6">
+            <ScrollView className="flex-1 px-6 pt-4">
                 {/* Input Area */}
                 <View className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 mb-6">
                     <TextInput

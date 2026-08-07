@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { Search, ChevronLeft, Mail, Phone, Briefcase, ChevronRight, User } from 'lucide-react-native';
+import { Search, Mail, Phone, Briefcase, ChevronRight } from 'lucide-react-native';
 import api from '../../lib/api';
 import { PremiumCard } from '../../components/shared/PremiumCard';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 interface StaffMember {
     id: number;
@@ -80,26 +81,12 @@ export default function StaffDirectoryPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* Professional Search Header */}
-            <View className="bg-primary px-6 pt-6 pb-12 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between mb-8">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">KIU Directory</Text>
-                        <Text className="text-white text-xl font-bold">University Staff</Text>
-                    </View>
-                    <View className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20">
-                        <User size={22} color="white" />
-                    </View>
-                </View>
+            {/* Professional Header */}
+            <ScreenHeader title="University Staff" subtitle="KIU Directory" />
 
-                {/* Premium Search Bar */}
-                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-xl shadow-primary/20">
+            {/* Premium Search Bar */}
+            <View className="px-4 py-3">
+                <View className="bg-white flex-row items-center px-5 h-14 rounded-2xl shadow-sm border border-gray-100">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchQuery}
@@ -111,7 +98,7 @@ export default function StaffDirectoryPage() {
                 </View>
             </View>
 
-            <ScrollView className="flex-1 px-6 mt-4" contentContainerStyle={{ paddingBottom: 40, paddingTop: 10 }}>
+            <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 40, paddingTop: 10 }}>
                 {loading && !staff.length ? (
                     <ActivityIndicator size="large" color="#002147" className="mt-20" />
                 ) : filteredStaff.length > 0 ? (

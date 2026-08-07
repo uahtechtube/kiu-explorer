@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Clock, FileText, AlertCircle, CheckSquare, ChevronLeft } from 'lucide-react-native';
+import { Clock, FileText, AlertCircle, CheckSquare } from 'lucide-react-native';
 import api from '../../../lib/api';
+import ScreenHeader from '../../../components/shared/ScreenHeader';
 
 interface ExamDetails {
     id: number;
@@ -78,19 +79,10 @@ export default function ExamInstructionsPage() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-primary px-6 pt-6 pb-8">
-                <View className="flex-row items-center mb-4">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-3">
-                        <ChevronLeft size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <View className="flex-1">
-                        <Text className="text-white text-2xl font-bold">Exam Instructions</Text>
-                    </View>
-                </View>
-            </View>
+            {/* Dashboard-style header */}
+            <ScreenHeader title="Exam Instructions" />
 
-            <ScrollView className="flex-1 px-6 pt-6">
+            <ScrollView className="flex-1 px-6 pt-4">
                 {/* Exam Info Card */}
                 <View className="bg-white rounded-3xl p-6 mb-6 shadow-sm border border-gray-100">
                     <Text className="text-primary text-2xl font-bold mb-2">{examDetails?.title}</Text>

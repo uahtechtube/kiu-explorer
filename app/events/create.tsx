@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Calendar, MapPin, Users, FileText, Tag } from 'lucide-react-native';
+import { Calendar, MapPin, Users, FileText, Tag } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 export default function CreateEventPage() {
     const router = useRouter();
@@ -115,24 +116,10 @@ export default function CreateEventPage() {
             <Stack.Screen options={{ headerShown: false }} />
 
             {/* Premium Header */}
-            <View className="bg-primary px-6 pt-6 pb-8 rounded-b-[40px] shadow-lg">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-12 h-12 bg-white/10 rounded-2xl items-center justify-center border border-white/20"
-                    >
-                        <ChevronLeft size={24} color="white" />
-                    </TouchableOpacity>
-                    <View className="items-center">
-                        <Text className="text-white/60 text-xs font-bold uppercase tracking-widest">Create</Text>
-                        <Text className="text-white text-xl font-bold">New Event</Text>
-                    </View>
-                    <View className="w-12" />
-                </View>
-            </View>
+            <ScreenHeader title="New Event" subtitle="Create" />
 
             <ScrollView
-                className="flex-1 px-6 -mt-2"
+                className="flex-1 px-6 pt-4"
                 contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >

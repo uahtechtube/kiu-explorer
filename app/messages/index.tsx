@@ -134,43 +134,48 @@ export default function ChatListPage() {
         <SafeAreaView className="flex-1 bg-gray-50">
             <Stack.Screen options={{ headerShown: false }} />
 
-            {/* High-End Header */}
-            <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg">
-                <View className="flex-row justify-between items-center mb-8">
-                    <View>
-                        <Text className="text-secondary font-black text-[10px] uppercase tracking-widest mb-1">Communication Hub</Text>
-                        <Text className="text-white text-3xl font-black">Messages</Text>
-                    </View>
-                    <TouchableOpacity 
-                        onPress={() => router.push('/messages/new')}
-                        className="w-12 h-12 bg-secondary rounded-2xl items-center justify-center shadow-xl shadow-secondary/20"
-                    >
-                        <Plus size={22} color="#002147" />
+            {/* Standard Dashboard Header Bar */}
+            <View className="bg-white px-6 py-4 flex-row items-center justify-between border-b border-gray-100 shadow-xs">
+                <View className="flex-row items-center flex-1 pr-3">
+                    <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl bg-gray-50 mr-3">
+                        <ChevronLeft size={22} color="#002147" />
                     </TouchableOpacity>
+                    <View>
+                        <Text className="text-xl font-bold text-primary">Messages</Text>
+                        <Text className="text-gray-400 text-xs font-medium">Communication Hub</Text>
+                    </View>
                 </View>
+                <TouchableOpacity 
+                    onPress={() => router.push('/messages/new')}
+                    className="p-2.5 bg-blue-50 rounded-xl border border-blue-100/60"
+                >
+                    <Plus size={20} color="#002147" />
+                </TouchableOpacity>
+            </View>
 
-                {/* Performance Search Hub */}
-                <View className="bg-white/10 flex-row items-center px-5 h-14 rounded-2xl border border-white/10 mb-6">
+            <View className="px-6 pt-4">
+                {/* Search Bar in Dashboard Card Style */}
+                <View className="bg-white flex-row items-center px-4 py-3 rounded-2xl border border-gray-100 shadow-sm mb-4">
                     <Search size={20} color="#94A3B8" />
                     <TextInput
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         placeholder="Search conversations..."
                         placeholderTextColor="#94A3B8"
-                        className="flex-1 ml-3 text-white font-medium"
+                        className="flex-1 ml-3 text-primary text-sm font-medium"
                     />
                 </View>
 
                 {/* Context Tabs */}
-                <View className="flex-row bg-white/5 p-1 rounded-2xl border border-white/10">
+                <View className="flex-row bg-gray-200/60 p-1 rounded-2xl mb-2">
                     {['All', 'Direct', 'Groups'].map((tab) => (
                         <TouchableOpacity
                             key={tab}
                             onPress={() => setActiveTab(tab as any)}
-                            className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${activeTab === tab ? 'bg-secondary' : ''
+                            className={`flex-1 flex-row items-center justify-center py-2.5 rounded-xl ${activeTab === tab ? 'bg-white shadow-xs' : ''
                                 }`}
                         >
-                            <Text className={`text-[10px] font-black uppercase ${activeTab === tab ? 'text-primary' : 'text-white/60'}`}>
+                            <Text className={`text-xs font-bold ${activeTab === tab ? 'text-primary' : 'text-gray-500'}`}>
                                 {tab}
                             </Text>
                         </TouchableOpacity>

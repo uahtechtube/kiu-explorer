@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
 import { Sparkles, MessageSquare, PlusCircle, Trash2, BookOpen, FileText, Calculator, ChevronRight, BookOpenCheck } from 'lucide-react-native';
 import api from '../../lib/api';
+import ScreenHeader from '../../components/shared/ScreenHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -83,7 +84,7 @@ export default function AIAssistantDashboard() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-            <Stack.Screen options={{ title: 'Gutti AI Assistant', headerShown: true, headerStyle: { backgroundColor: '#002147' }, headerTintColor: '#fff' }} />
+            <Stack.Screen options={{ headerShown: false }} />
 
             <ScrollView
                 className="flex-1"
@@ -91,18 +92,10 @@ export default function AIAssistantDashboard() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero Sparkle Box */}
-                <View className="bg-primary px-6 pt-6 pb-20 rounded-b-[40px] shadow-lg items-center">
-                    <View className="w-16 h-16 bg-secondary rounded-[24px] items-center justify-center border-4 border-white/10 mb-4 shadow-md">
-                        <Sparkles size={32} color="#002147" />
-                    </View>
-                    <Text className="text-white text-xl font-black uppercase text-center tracking-wide">Gutti Study Assistant</Text>
-                    <Text className="text-gray-300 text-xs text-center mt-1.5 px-6 leading-relaxed">
-                        Master your university curriculum, solve complex problems, and summarize course materials with KIU's advanced learning model.
-                    </Text>
-                </View>
+                <ScreenHeader title="Gutti Study Assistant" />
 
                 {/* Floating "Start New Chat" Button */}
-                <View className="px-6 -mt-10 mb-8">
+                <View className="px-6 mb-8">
                     <TouchableOpacity
                         onPress={() => handleStartNewChat()}
                         className="bg-secondary p-5 rounded-[24px] flex-row items-center justify-center shadow-lg border border-primary/10"
