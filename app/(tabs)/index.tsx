@@ -39,8 +39,6 @@ import api from '../../lib/api';
 
 const LogoImage = require('../../assets/images/logo.png');
 
-let hasShownPopupThisSession = false;
-
 const resolveMediaUrl = (path: string | null | undefined): string | null => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
@@ -168,8 +166,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
-      if (!hasShownPopupThisSession) {
-        api.get('/popup-announcement/active')
+      api.get('/popup-announcement/active')
           .then(res => {
             const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
             const active = list.filter((p: any) => p.is_active);
@@ -177,11 +174,9 @@ export default function StudentDashboard() {
               setPopups(active);
               setPopupIndex(0);
               setPopupVisible(true);
-              hasShownPopupThisSession = true;
             }
           })
           .catch(err => console.error('Error fetching popup:', err));
-      }
     }
   }, [user]);
 
