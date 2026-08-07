@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -280,6 +282,91 @@ class AuthController extends Controller
         \Storage::disk('public')->put($path, $imageData);
         
         return 'storage/' . $path;
+    }
+
+    /**
+     * Send a password reset code to the user's email.
+     */
+    public function forgotPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|exists:users,email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => Hash::make($token), 'created_at' => now()]
+        );
+
+        $resetUrl = rtrim(config('app.url'), '/') . '/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+
+        Mail::raw(
+            "Hello {$user->first_name},\n\nWe received a request to reset your KIU Explorer password.\n\n" .
+            "Your password reset code is: {$token}\n\n" .
+            "Or click this link to reset it: {$resetUrl}\n\n" .
+            "This code expires in 60 minutes. If you did not request this, you can safely ignore this email.\n\n" .
+            "Regards,\nKIU Explorer Team",
+            function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Reset your KIU Explorer password');
+            }
+        );
+
+        return response()->json([
+            'message' => 'If that email address exists in our system, a password reset code has been sent to it.',
+            'sent_to' => $user->email,
+            'code' => config('app.env') === 'production' ? null : $token,
+        ], 200);
+    }
+
+    /**
+     * Reset the user's password using the emailed code.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        if (!$record || !Hash::check($request->token, $record->token)) {
+            return response()->json(['message' => 'Invalid or expired reset code.'], 400);
+        }
+
+        if (\Carbon\Carbon::parse($record->created_at)->addMinutes(60)->isPast()) {
+            DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+            return response()->json(['message' => 'This reset code has expired. Please request a new one.'], 400);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'No account found for that email.'], 404);
+        }
+
+        $user->update(['password' => Hash::make($request->password)]);
+
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        return response()->json([
+            'message' => 'Your password has been reset successfully. You can now sign in.',
+        ], 200);
     }
 
     /**

@@ -11,10 +11,9 @@ class PopupAnnouncement extends Model
 
     protected $fillable = [
         'title',
-        'registration_updates',
-        'documentation_deadlines',
-        'student_dues',
-        'events',
+        'body',
+        'image',
+        'video',
         'is_active',
     ];
 

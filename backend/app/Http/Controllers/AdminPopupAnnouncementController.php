@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\DB;
 class AdminPopupAnnouncementController extends Controller
 {
     /**
-     * Get the active popup announcement (Public / Student access).
+     * Get all active popup announcements (Public / Student access).
      */
     public function getActive()
     {
-        $popup = PopupAnnouncement::where('is_active', true)->latest()->first();
+        $popups = PopupAnnouncement::where('is_active', true)->latest()->get();
 
-        return response()->json($popup, 200);
+        return response()->json($popups, 200);
     }
 
     /**
@@ -45,10 +45,9 @@ class AdminPopupAnnouncementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
-            'registration_updates' => 'nullable|string',
-            'documentation_deadlines' => 'nullable|string',
-            'student_dues' => 'nullable|string',
-            'events' => 'nullable|string',
+            'body' => 'nullable|string',
+            'image' => 'nullable|string',
+            'video' => 'nullable|string',
             'is_active' => 'boolean'
         ]);
 
@@ -60,17 +59,13 @@ class AdminPopupAnnouncementController extends Controller
         try {
             $isActive = $request->is_active ?? false;
 
-            // If we are activating this popup, deactivate all others
-            if ($isActive) {
-                PopupAnnouncement::where('is_active', true)->update(['is_active' => false]);
-            }
+            // Multiple popups may be active at the same time (students see them as slides)
 
             $popup = PopupAnnouncement::create([
                 'title' => $request->title,
-                'registration_updates' => $request->registration_updates,
-                'documentation_deadlines' => $request->documentation_deadlines,
-                'student_dues' => $request->student_dues,
-                'events' => $request->events,
+                'body' => $request->body,
+                'image' => $request->image ? $this->uploadBase64File($request->image, 'popup-media') : null,
+                'video' => $request->video ? $this->uploadBase64File($request->video, 'popup-media') : null,
                 'is_active' => $isActive,
             ]);
 
@@ -103,10 +98,7 @@ class AdminPopupAnnouncementController extends Controller
         try {
             $newStatus = !$popup->is_active;
 
-            if ($newStatus) {
-                // Deactivate all others
-                PopupAnnouncement::where('is_active', true)->update(['is_active' => false]);
-            }
+            // Multiple popups may be active at the same time (students see them as slides)
 
             $popup->update(['is_active' => $newStatus]);
 
@@ -137,5 +129,41 @@ class AdminPopupAnnouncementController extends Controller
         $popup->delete();
 
         return response()->json(['message' => 'Popup announcement deleted successfully.'], 200);
+    }
+
+    /**
+     * Save a base64 data URI (image/video) to public storage, or return the value untouched if it is already a URL/path.
+     */
+    private function uploadBase64File($dataUri, $folder)
+    {
+        if (strpos($dataUri, 'data:') !== 0) {
+            return $dataUri;
+        }
+
+        preg_match('/^data:([a-zA-Z0-9.\/+-]+);base64,(.*)$/', $dataUri, $matches);
+        if (!$matches || !isset($matches[2])) {
+            return $dataUri;
+        }
+
+        $mime = $matches[1];
+        $fileData = base64_decode($matches[2]);
+
+        if ($fileData === false) {
+            return $dataUri;
+        }
+
+        $extension = 'bin';
+        if (strpos($mime, 'image/') === 0) {
+            $extension = str_replace('image/', '', $mime);
+        } elseif (strpos($mime, 'video/') === 0) {
+            $extension = str_replace('video/', '', $mime);
+        }
+
+        $fileName = uniqid() . '_' . time() . '.' . $extension;
+        $path = $folder . '/' . $fileName;
+
+        \Storage::disk('public')->put($path, $fileData);
+
+        return 'storage/' . $path;
     }
 }
