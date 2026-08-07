@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image, Modal, Alert } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image, Modal, Alert, FlatList, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { useAuth } from '../../context/AuthContext';
 import { 
     Menu, 
@@ -39,6 +40,52 @@ import api from '../../lib/api';
 const LogoImage = require('../../assets/images/logo.png');
 
 let hasShownPopupThisSession = false;
+
+const resolveMediaUrl = (path: string | null | undefined): string | null => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanBase = api.defaults.baseURL?.replace('/api', '') || '';
+    return `${cleanBase}/${path.replace(/^\//, '')}`;
+};
+
+interface PopupSlideProps {
+    popup: any;
+    width: number;
+}
+
+function PopupSlide({ popup, width }: PopupSlideProps) {
+    const imageUrl = resolveMediaUrl(popup.image);
+    const videoUrl = resolveMediaUrl(popup.video);
+    const player = useVideoPlayer(videoUrl ?? null, (p) => {
+        p.loop = true;
+        p.play();
+    });
+
+    return (
+        <View style={{ width }} className="px-6 pb-4">
+            <ScrollView showsVerticalScrollIndicator={false} className="max-h-64">
+                <View className="w-14 h-14 bg-amber-50 rounded-2xl items-center justify-center mb-4 mt-5 border border-amber-100 self-center">
+                    <AlertCircle size={28} color="#D97706" />
+                </View>
+                <Text className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1 text-center">Notice</Text>
+                <Text className="text-xl font-bold text-primary text-center mb-3">{popup.title}</Text>
+                {!!popup.body && (
+                    <Text className="text-gray-600 text-sm leading-5 text-center">{popup.body}</Text>
+                )}
+                {imageUrl && (
+                    <Image source={{ uri: imageUrl }} className="w-full h-40 rounded-2xl mt-4" resizeMode="cover" />
+                )}
+                {videoUrl && (
+                    <VideoView
+                        player={player}
+                        nativeControls
+                        style={{ width: '100%', height: 180, borderRadius: 16, marginTop: 16 }}
+                    />
+                )}
+            </ScrollView>
+        </View>
+    );
+}
 
 interface DashboardData {
   student: {
@@ -87,8 +134,12 @@ export default function StudentDashboard() {
   const { user, signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [popupAnnouncement, setPopupAnnouncement] = useState<any>(null);
+  const [popups, setPopups] = useState<any[]>([]);
   const [popupVisible, setPopupVisible] = useState(false);
+  const [popupIndex, setPopupIndex] = useState(0);
+  const popupListRef = useRef<FlatList<any>>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const popupWidth = Math.min(windowWidth - 48, 384);
   
   // Navigation Modals
   const [sideMenuVisible, setSideMenuVisible] = useState(false);
@@ -120,8 +171,11 @@ export default function StudentDashboard() {
       if (!hasShownPopupThisSession) {
         api.get('/popup-announcement/active')
           .then(res => {
-            if (res.data && res.data.is_active) {
-              setPopupAnnouncement(res.data);
+            const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+            const active = list.filter((p: any) => p.is_active);
+            if (active.length) {
+              setPopups(active);
+              setPopupIndex(0);
               setPopupVisible(true);
               hasShownPopupThisSession = true;
             }
@@ -130,6 +184,18 @@ export default function StudentDashboard() {
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!popupVisible || popups.length <= 1) return;
+    const timer = setInterval(() => {
+      setPopupIndex(prev => {
+        const next = (prev + 1) % popups.length;
+        popupListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [popupVisible, popups.length]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
@@ -609,8 +675,8 @@ export default function StudentDashboard() {
         </View>
       </Modal>
 
-      {/* Popup Announcement Modal */}
-      {popupAnnouncement && (
+      {/* Popup Announcement Modal (auto-sliding slides) */}
+      {popups.length > 0 && (
         <Modal
           animationType="fade"
           transparent={true}
@@ -618,9 +684,21 @@ export default function StudentDashboard() {
           onRequestClose={() => setPopupVisible(false)}
         >
           <View className="flex-1 bg-black/60 items-center justify-center px-6">
-            <View className="bg-white w-full max-w-sm rounded-[28px] p-6 shadow-2xl items-center relative overflow-hidden">
-              <View className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
-              
+            <View className="bg-white w-full max-w-sm rounded-[28px] overflow-hidden shadow-2xl">
+              <View className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
+              <FlatList
+                ref={popupListRef}
+                data={popups}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id.toString()}
+                getItemLayout={(_, index) => ({ length: popupWidth, offset: popupWidth * index, index })}
+                onMomentumScrollEnd={(e) => setPopupIndex(Math.round(e.nativeEvent.contentOffset.x / popupWidth))}
+                renderItem={({ item }) => <PopupSlide popup={item} width={popupWidth} />}
+              />
+
               <TouchableOpacity
                 onPress={() => setPopupVisible(false)}
                 className="absolute top-4 right-4 w-8 h-8 bg-gray-100 rounded-full items-center justify-center z-10"
@@ -628,33 +706,27 @@ export default function StudentDashboard() {
                 <X size={18} color="#475569" />
               </TouchableOpacity>
 
-              <View className="w-14 h-14 bg-amber-50 rounded-2xl items-center justify-center mb-4 mt-2 border border-amber-100">
-                <AlertCircle size={28} color="#D97706" />
+              {popups.length > 1 && (
+                <View className="flex-row justify-center pb-3">
+                  {popups.map((_, i) => (
+                    <View
+                      key={i}
+                      className={`w-2 h-2 rounded-full mx-1 ${i === popupIndex ? 'bg-primary' : 'bg-gray-200'}`}
+                    />
+                  ))}
+                </View>
+              )}
+
+              <View className="px-6 pb-6 pt-2">
+                <TouchableOpacity
+                  onPress={() => setPopupVisible(false)}
+                  className="w-full bg-primary py-3.5 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
+                >
+                  <Text className="text-white font-bold text-base">
+                    {popups.length > 1 ? 'Cancel' : 'Understood'}
+                  </Text>
+                </TouchableOpacity>
               </View>
-
-              <Text className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Notice</Text>
-              <Text className="text-xl font-bold text-primary text-center mb-3">{popupAnnouncement.title}</Text>
-
-              <ScrollView className="max-h-56 w-full mb-6">
-                {[
-                    { label: 'Registration Updates', text: popupAnnouncement.registration_updates },
-                    { label: 'Documentation & Deadlines', text: popupAnnouncement.documentation_deadlines },
-                    { label: 'Student Dues', text: popupAnnouncement.student_dues },
-                    { label: 'Upcoming Events', text: popupAnnouncement.events },
-                ].filter(section => section.text).map(section => (
-                    <View key={section.label} className="mb-4">
-                        <Text className="text-primary font-black text-[11px] uppercase tracking-widest mb-1.5">{section.label}</Text>
-                        <Text className="text-gray-600 text-sm leading-5">{section.text}</Text>
-                    </View>
-                ))}
-              </ScrollView>
-
-              <TouchableOpacity
-                onPress={() => setPopupVisible(false)}
-                className="w-full bg-primary py-3.5 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
-              >
-                <Text className="text-white font-bold text-base">Understood</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </Modal>

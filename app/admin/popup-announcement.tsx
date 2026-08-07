@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, FlatList, Modal, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Plus, Check, Trash2, ToggleLeft, ToggleRight, X, AlertCircle } from 'lucide-react-native';
+import { ArrowLeft, Plus, Check, Trash2, ToggleLeft, ToggleRight, X, AlertCircle, ImageIcon, Video, Clapperboard } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import api from '../../lib/api';
 
 export default function AdminPopupAnnouncement() {
@@ -17,12 +18,16 @@ export default function AdminPopupAnnouncement() {
     // Form state
     const [form, setForm] = useState({
         title: '',
-        registration_updates: '',
-        documentation_deadlines: '',
-        student_dues: '',
-        events: '',
+        body: '',
+        imageData: '',
+        imageUrl: '',
+        videoData: '',
+        videoUrl: '',
         is_active: false,
     });
+
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
     useEffect(() => {
         fetchPopups();
@@ -41,25 +46,68 @@ export default function AdminPopupAnnouncement() {
         }
     };
 
+    const resetForm = () => {
+        setForm({
+            title: '',
+            body: '',
+            imageData: '',
+            imageUrl: '',
+            videoData: '',
+            videoUrl: '',
+            is_active: false,
+        });
+        setImagePreview(null);
+        setVideoPreview(null);
+    };
+
+    const pickMedia = async (kind: 'image' | 'video') => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission Required', 'Please grant media library permission.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: kind === 'image' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
+            quality: kind === 'image' ? 0.7 : undefined,
+            base64: true,
+        });
+        if (!result.canceled && result.assets[0]) {
+            const asset = result.assets[0];
+            const mime = asset.mimeType || (kind === 'image' ? 'image/jpeg' : 'video/mp4');
+            const dataUri = `data:${mime};base64,${asset.base64}`;
+            if (kind === 'image') {
+                setForm(f => ({ ...f, imageData: dataUri }));
+                setImagePreview(asset.uri);
+            } else {
+                if (asset.fileSize && asset.fileSize > 15 * 1024 * 1024) {
+                    Alert.alert('Large Video', 'The selected video is large and may take a while to upload.');
+                }
+                setForm(f => ({ ...f, videoData: dataUri }));
+                setVideoPreview(asset.uri);
+            }
+        }
+    };
+
     const handleCreate = async () => {
         if (!form.title) {
-            Alert.alert('Validation Error', 'Please enter a title.');
+            Alert.alert('Validation Error', 'Please enter a heading.');
             return;
         }
 
+        const payload: any = {
+            title: form.title,
+            body: form.body || null,
+            image: form.imageData || form.imageUrl || null,
+            video: form.videoData || form.videoUrl || null,
+            is_active: form.is_active,
+        };
+
         setActionLoading(true);
         try {
-            await api.post('/admin/popup-announcement', form);
+            await api.post('/admin/popup-announcement', payload);
             Alert.alert('Success', 'Popup announcement configured.');
             setCreateVisible(false);
-            setForm({
-                title: '',
-                registration_updates: '',
-                documentation_deadlines: '',
-                student_dues: '',
-                events: '',
-                is_active: false,
-            });
+            resetForm();
             fetchPopups();
         } catch (error) {
             console.error(error);
@@ -142,7 +190,24 @@ export default function AdminPopupAnnouncement() {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                        <Text className="text-gray-400 text-xs">Created: {new Date(item.created_at).toLocaleDateString()}</Text>
+                        {!!item.body && (
+                            <Text className="text-gray-600 text-sm mb-2" numberOfLines={2}>{item.body}</Text>
+                        )}
+                        <View className="flex-row items-center space-x-3 mt-1">
+                            {!!item.image && (
+                                <View className="flex-row items-center bg-blue-50 rounded-full px-3 py-1">
+                                    <ImageIcon size={12} color="#2563EB" />
+                                    <Text className="text-blue-600 text-xs font-bold ml-1">Image</Text>
+                                </View>
+                            )}
+                            {!!item.video && (
+                                <View className="flex-row items-center bg-purple-50 rounded-full px-3 py-1">
+                                    <Video size={12} color="#7C3AED" />
+                                    <Text className="text-purple-600 text-xs font-bold ml-1">Video</Text>
+                                </View>
+                            )}
+                            <Text className="text-gray-400 text-xs">Created: {new Date(item.created_at).toLocaleDateString()}</Text>
+                        </View>
                     </View>
                 )}
                 ListEmptyComponent={
@@ -172,7 +237,7 @@ export default function AdminPopupAnnouncement() {
                         <TouchableWithoutFeedback onPress={() => setCreateVisible(false)}>
                             <View className="absolute inset-0" />
                         </TouchableWithoutFeedback>
-                        <View className="bg-white rounded-t-[36px] max-h-[85%] p-6 relative z-10">
+                        <View className="bg-white rounded-t-[36px] max-h-[90%] p-6 relative z-10">
                             <View className="flex-row justify-between items-center mb-6">
                                 <Text className="text-xl font-bold text-primary">Configure Launch Popup</Text>
                                 <TouchableOpacity onPress={() => setCreateVisible(false)} className="p-2 bg-gray-50 rounded-full w-10 h-10 items-center justify-center">
@@ -182,7 +247,7 @@ export default function AdminPopupAnnouncement() {
 
                             <ScrollView showsVerticalScrollIndicator={false} className="space-y-4 mb-6">
                                 <View>
-                                    <Text className="text-primary font-semibold mb-2 ml-1">Popup Title</Text>
+                                    <Text className="text-primary font-semibold mb-2 ml-1">Heading</Text>
                                     <TextInput
                                         className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary font-semibold"
                                         placeholder="e.g. Registration Deadline Update"
@@ -192,59 +257,90 @@ export default function AdminPopupAnnouncement() {
                                 </View>
 
                                 <View>
-                                    <Text className="text-primary font-semibold mb-2 ml-1">Registration Updates</Text>
+                                    <Text className="text-primary font-semibold mb-2 ml-1">Text Body</Text>
                                     <TextInput
                                         className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-primary font-medium"
-                                        placeholder="Updates about registration..."
+                                        placeholder="Write the announcement body here..."
                                         multiline
-                                        numberOfLines={3}
-                                        style={{ height: 80, textAlignVertical: 'top' }}
-                                        value={form.registration_updates}
-                                        onChangeText={(val) => setForm({ ...form, registration_updates: val })}
+                                        numberOfLines={4}
+                                        style={{ minHeight: 100, textAlignVertical: 'top' }}
+                                        value={form.body}
+                                        onChangeText={(val) => setForm({ ...form, body: val })}
                                     />
                                 </View>
 
                                 <View>
-                                    <Text className="text-primary font-semibold mb-2 ml-1">Documentation & Deadlines</Text>
+                                    <Text className="text-primary font-semibold mb-2 ml-1">Image (optional)</Text>
+                                    <View className="flex-row space-x-2">
+                                        <TouchableOpacity
+                                            onPress={() => pickMedia('image')}
+                                            className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl h-14 flex-row items-center justify-center"
+                                        >
+                                            <ImageIcon size={18} color="#002147" />
+                                            <Text className="text-primary font-semibold ml-2">
+                                                {form.imageData ? 'Change Image' : 'Choose Image'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {(form.imageData || form.imageUrl) && (
+                                            <TouchableOpacity
+                                                onPress={() => { setForm(f => ({ ...f, imageData: '', imageUrl: '' })); setImagePreview(null); }}
+                                                className="w-14 h-14 bg-red-50 rounded-2xl items-center justify-center"
+                                            >
+                                                <Trash2 size={18} color="#EF4444" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    {imagePreview ? (
+                                        <Image source={{ uri: imagePreview }} className="w-full h-36 rounded-2xl mt-2" resizeMode="cover" />
+                                    ) : null}
                                     <TextInput
-                                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-primary font-medium"
-                                        placeholder="Submit passport photos by..."
-                                        multiline
-                                        numberOfLines={3}
-                                        style={{ height: 80, textAlignVertical: 'top' }}
-                                        value={form.documentation_deadlines}
-                                        onChangeText={(val) => setForm({ ...form, documentation_deadlines: val })}
+                                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary font-semibold mt-2"
+                                        placeholder="Or paste an image URL here"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        value={form.imageUrl}
+                                        onChangeText={(val) => { setForm(f => ({ ...f, imageUrl: val })); setImagePreview(val || null); }}
                                     />
                                 </View>
 
                                 <View>
-                                    <Text className="text-primary font-semibold mb-2 ml-1">Student Dues</Text>
+                                    <Text className="text-primary font-semibold mb-2 ml-1">Video (optional)</Text>
+                                    <View className="flex-row space-x-2">
+                                        <TouchableOpacity
+                                            onPress={() => pickMedia('video')}
+                                            className="flex-1 bg-gray-50 border border-gray-100 rounded-2xl h-14 flex-row items-center justify-center"
+                                        >
+                                            <Clapperboard size={18} color="#002147" />
+                                            <Text className="text-primary font-semibold ml-2">
+                                                {form.videoData ? 'Change Video' : 'Choose Video'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {(form.videoData || form.videoUrl) && (
+                                            <TouchableOpacity
+                                                onPress={() => { setForm(f => ({ ...f, videoData: '', videoUrl: '' })); setVideoPreview(null); }}
+                                                className="w-14 h-14 bg-red-50 rounded-2xl items-center justify-center"
+                                            >
+                                                <Trash2 size={18} color="#EF4444" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
                                     <TextInput
-                                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-primary font-medium"
-                                        placeholder="Departmental dues details..."
-                                        multiline
-                                        numberOfLines={3}
-                                        style={{ height: 80, textAlignVertical: 'top' }}
-                                        value={form.student_dues}
-                                        onChangeText={(val) => setForm({ ...form, student_dues: val })}
-                                    />
-                                </View>
-
-                                <View>
-                                    <Text className="text-primary font-semibold mb-2 ml-1">Upcoming Events</Text>
-                                    <TextInput
-                                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-primary font-medium"
-                                        placeholder="Upcoming orientation or events..."
-                                        multiline
-                                        numberOfLines={3}
-                                        style={{ height: 80, textAlignVertical: 'top' }}
-                                        value={form.events}
-                                        onChangeText={(val) => setForm({ ...form, events: val })}
+                                        className="bg-gray-50 border border-gray-100 rounded-2xl px-4 h-14 text-primary font-semibold mt-2"
+                                        placeholder="Or paste a video URL here"
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        value={form.videoUrl}
+                                        onChangeText={(val) => { setForm(f => ({ ...f, videoUrl: val })); setVideoPreview(val || null); }}
                                     />
                                 </View>
 
                                 <View className="flex-row items-center justify-between py-2">
-                                    <Text className="text-primary font-bold">Set Active Immediately</Text>
+                                    <View className="flex-1 mr-4">
+                                        <Text className="text-primary font-bold">Set Active Immediately</Text>
+                                        <Text className="text-gray-400 text-xs mt-0.5">
+                                            Multiple active popups appear as auto-sliding slides for students.
+                                        </Text>
+                                    </View>
                                     <TouchableOpacity onPress={() => setForm({ ...form, is_active: !form.is_active })}>
                                         {form.is_active ? (
                                             <ToggleRight size={36} color="#10B981" />
