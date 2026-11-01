@@ -11,6 +11,7 @@ class Exam extends Model
 
     protected $fillable = [
         'course_id',
+        'course_code',
         'academic_session_id',
         'title',
         'instructions',
@@ -20,6 +21,7 @@ class Exam extends Model
         'end_time',
         'total_marks',
         'passing_marks',
+        'uploaded_by',
         'is_published',
     ];
 

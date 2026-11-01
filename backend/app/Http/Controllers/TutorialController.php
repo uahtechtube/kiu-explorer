@@ -22,6 +22,19 @@ class TutorialController extends Controller
             $query->where('course_id', $request->course_id);
         }
 
+        if ($request->has('uploaded_by')) {
+            $query->where('uploaded_by', $request->uploaded_by);
+        }
+
+        if ($request->has('my_content') && $request->user()) {
+            $query->where('uploaded_by', $request->user()->id);
+        }
+        
+        // Scope active tutorials unless admin
+        if (!$request->user() || !in_array($request->user()->role, ['admin', 'lecturer'])) {
+            $query->active();
+        }
+
         if ($request->has('source_type')) {
             $query->where('source_type', $request->source_type);
         }
@@ -43,7 +56,7 @@ class TutorialController extends Controller
     {
         $tutorial = Tutorial::with(['uploader:id,surname,first_name', 'course:id,code,title'])->find($id);
 
-        if (!$tutorial) {
+        if (!$tutorial || ($tutorial->status === 'banned' && (!in_array($request->user()?->role, ['admin', 'lecturer'])))) {
             return response()->json(['message' => 'Tutorial not found'], 404);
         }
 
@@ -63,7 +76,7 @@ class TutorialController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'course_id'   => 'nullable|exists:courses,id',
-            'course_code' => 'nullable|string|exists:courses,code',
+            'course_code' => 'nullable|string',
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
             'file'        => 'nullable|file|max:51200',
@@ -80,14 +93,9 @@ class TutorialController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        $courseId = $request->course_id;
-        if (!$courseId && $request->course_code) {
-            $course = Course::where('code', $request->course_code)->first();
-            if ($course) $courseId = $course->id;
-        }
-
         $data = [
-            'course_id'   => $courseId,
+            'course_id'   => $request->course_id,
+            'course_code' => $request->course_code ? strtoupper($request->course_code) : null,
             'uploaded_by' => $user->id,
             'title'       => $request->title,
             'description' => $request->description,
@@ -137,34 +145,18 @@ class TutorialController extends Controller
 
         $user = $request->user();
 
-        $courseId = $request->course_id;
-        if (!$courseId && $request->course_code) {
-            $course = Course::where('code', $request->course_code)->first();
-            if ($course) $courseId = $course->id;
-        }
-
-        // Check if this video already saved by the same user for the same course
-        $existing = Tutorial::where('youtube_video_id', $request->youtube_video_id)
-            ->where('uploaded_by', $user->id)
-            ->when($courseId, fn($q) => $q->where('course_id', $courseId))
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'message'  => 'Video already saved',
-                'tutorial' => $this->transformTutorial($existing),
-            ]);
-        }
-
-        $tutorial = Tutorial::create([
-            'course_id'        => $courseId,
-            'uploaded_by'      => $user->id,
-            'title'            => $request->title,
-            'description'      => $request->description ?? $request->channel_title,
-            'youtube_video_id' => $request->youtube_video_id,
-            'source_type'      => 'youtube',
-            'file_type'        => 'youtube',
-        ]);
+        $tutorial = Tutorial::firstOrCreate(
+            ['youtube_video_id' => $request->youtube_video_id],
+            [
+                'course_id'        => $request->course_id,
+                'course_code'      => $request->course_code ? strtoupper($request->course_code) : null,
+                'uploaded_by'      => $user ? $user->id : null,
+                'title'            => $request->title,
+                'description'      => $request->description ?? $request->channel_title,
+                'source_type'      => 'youtube',
+                'file_type'        => 'youtube',
+            ]
+        );
 
         return response()->json([
             'message'  => 'YouTube tutorial saved successfully',
@@ -188,15 +180,51 @@ class TutorialController extends Controller
 
         $apiKey = config('services.youtube.key');
 
-        if (!$apiKey) {
-            return response()->json(['message' => 'YouTube API not configured.'], 500);
+        if (!$apiKey || $apiKey === '') {
+            // Return professional mock results if API key is not set
+            return response()->json([
+                'message' => 'YouTube search (Mock Data Mode)',
+                'data' => [
+                    [
+                        'videoId' => '_uQrJ0TkZlc',
+                        'title' => 'Python Tutorial for Beginners - Full Course',
+                        'channelTitle' => 'Programming with Mosh',
+                        'description' => 'Python tutorial for beginners - Learn Python for machine learning and web development.',
+                        'publishedAt' => '2019-02-18T15:00:00Z',
+                        'thumbnail' => 'https://img.youtube.com/vi/_uQrJ0TkZlc/mqdefault.jpg',
+                        'duration' => '6:14:07',
+                        'views' => '35,000,000'
+                    ],
+                    [
+                        'videoId' => 'rfscVS0vtbw',
+                        'title' => 'Learn Python - Full Course for Beginners',
+                        'channelTitle' => 'freeCodeCamp.org',
+                        'description' => 'This course will give you a full introduction into all of the core concepts in Python.',
+                        'publishedAt' => '2018-07-11T16:00:00Z',
+                        'thumbnail' => 'https://img.youtube.com/vi/rfscVS0vtbw/mqdefault.jpg',
+                        'duration' => '4:26:51',
+                        'views' => '42,200,000'
+                    ],
+                    [
+                        'videoId' => 'eIrMbAQSU34',
+                        'title' => 'Java Tutorial for Beginners',
+                        'channelTitle' => 'Programming with Mosh',
+                        'description' => 'Java tutorial for beginners - Learn Java, the language behind millions of apps and websites.',
+                        'publishedAt' => '2019-07-16T14:30:00Z',
+                        'thumbnail' => 'https://img.youtube.com/vi/eIrMbAQSU34/mqdefault.jpg',
+                        'duration' => '2:30:00',
+                        'views' => '15,500,000'
+                    ]
+                ],
+                'query' => $request->q,
+            ]);
         }
 
         $maxResults = $request->input('max_results', 10);
 
         try {
-            // Step 1: Search for videos
-            $searchResponse = Http::get('https://www.googleapis.com/youtube/v3/search', [
+            // Step 1: Search for videos with an increased timeout and retry logic
+            $searchResponse = Http::timeout(20)->retry(2, 100)->get('https://www.googleapis.com/youtube/v3/search', [
                 'key'        => $apiKey,
                 'q'          => $request->q,
                 'part'       => 'snippet',
@@ -208,6 +236,10 @@ class TutorialController extends Controller
 
             if (!$searchResponse->successful()) {
                 $error = $searchResponse->json()['error']['message'] ?? 'YouTube API error';
+                // Fallback to mock data on certain errors to prevent 500
+                if ($searchResponse->status() >= 500) {
+                    return $this->getMockYoutubeResults($request->q);
+                }
                 return response()->json(['message' => $error], $searchResponse->status());
             }
 
@@ -262,8 +294,92 @@ class TutorialController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // If it's a timeout or connection issue, fallback to mock data
+            if (str_contains($e->getMessage(), 'cURL error 28') || str_contains($e->getMessage(), 'Timeout')) {
+                return $this->getMockYoutubeResults($request->q);
+            }
             return response()->json(['message' => 'Failed to search YouTube: ' . $e->getMessage()], 500);
         }
+    }
+
+    // ─── CRUD & Admin Methods ──────────────────────────────────────────────────
+
+    public function update(Request $request, $id)
+    {
+        $tutorial = Tutorial::findOrFail($id);
+        if ($tutorial->uploaded_by !== $request->user()->id && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        $tutorial->update($request->only(['title', 'description', 'course_code']));
+        return response()->json([
+            'message' => 'Tutorial updated successfully', 
+            'tutorial' => $this->transformTutorial($tutorial)
+        ]);
+    }
+
+    /**
+     * Delete tutorial
+     */
+    public function destroy($id)
+    {
+        $tutorial = Tutorial::findOrFail($id);
+
+        // Check ownership
+        if (request()->user()->id !== $tutorial->uploaded_by && !request()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        if ($tutorial->file_path && $tutorial->source_type === 'file') {
+            Storage::disk('public')->delete($tutorial->file_path);
+        }
+
+        $tutorial->delete();
+
+        return response()->json(['message' => 'Tutorial deleted successfully.']);
+    }
+
+    /**
+     * Ban/Unban tutorial (Toggle status)
+     */
+    public function ban($id)
+    {
+        $tutorial = Tutorial::findOrFail($id);
+
+        // Allow lecturer to toggle their own content or admin to toggle any
+        if (request()->user()->id !== $tutorial->uploaded_by && !request()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $newStatus = $tutorial->status === 'active' ? 'banned' : 'active';
+        $tutorial->update(['status' => $newStatus]);
+
+        return response()->json([
+            'message' => "Tutorial status updated to {$newStatus}.",
+            'status' => $newStatus,
+            'tutorial' => $this->transformTutorial($tutorial)
+        ]);
+    }
+
+    public function adminIndex(Request $request)
+    {
+        $tutorials = Tutorial::with(['uploader:id,surname,first_name', 'course:id,code,title'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $tutorials->transform(fn($t) => $this->transformTutorial($t));
+        return response()->json([
+            'message' => 'All tutorials retrieved',
+            'data' => $tutorials
+        ]);
+    }
+
+    public function updateAsAdmin(Request $request, $id)
+    {
+        return $this->update($request, $id);
+    }
+
+    public function destroyAsAdmin(Request $request, $id)
+    {
+        return $this->destroy($id);
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -280,9 +396,10 @@ class TutorialController extends Controller
             ? "https://img.youtube.com/vi/{$tutorial->youtube_video_id}/mqdefault.jpg"
             : null;
 
-        $tutorial->category = $tutorial->course ? $tutorial->course->code : 'General';
+        $tutorial->category = $tutorial->course_code ?? ($tutorial->course ? $tutorial->course->code : 'General');
         $tutorial->duration  = $isYoutube ? ($tutorial->duration ?? '—') : $this->calculateDuration($tutorial);
         $tutorial->views     = $tutorial->views ?? '0';
+        $tutorial->status    = $tutorial->status ?? 'active';
         $tutorial->lecturer  = [
             'name' => $tutorial->uploader
                 ? $tutorial->uploader->first_name . ' ' . $tutorial->uploader->surname
@@ -313,5 +430,48 @@ class TutorialController extends Controller
             return sprintf('%d:%02d:%02d', $h, $m2, $s);
         }
         return sprintf('%d:%02d', $m2, $s);
+    }
+
+    /**
+     * Return mock YouTube results for demo/offline use.
+     */
+    private function getMockYoutubeResults($query)
+    {
+        return response()->json([
+            'message' => 'YouTube search (Offline Mode - Mock Data)',
+            'data' => [
+                [
+                    'videoId' => '_uQrJ0TkZlc',
+                    'title' => 'Python Tutorial for Beginners - Full Course',
+                    'channelTitle' => 'Programming with Mosh',
+                    'description' => 'Python tutorial for beginners - Learn Python for machine learning and web development.',
+                    'publishedAt' => '2019-02-18T15:00:00Z',
+                    'thumbnail' => 'https://img.youtube.com/vi/_uQrJ0TkZlc/mqdefault.jpg',
+                    'duration' => '6:14:07',
+                    'views' => '35,000,000'
+                ],
+                [
+                    'videoId' => 'rfscVS0vtbw',
+                    'title' => 'Learn Python - Full Course for Beginners',
+                    'channelTitle' => 'freeCodeCamp.org',
+                    'description' => 'This course will give you a full introduction into all of the core concepts in Python.',
+                    'publishedAt' => '2018-07-11T16:00:00Z',
+                    'thumbnail' => 'https://img.youtube.com/vi/rfscVS0vtbw/mqdefault.jpg',
+                    'duration' => '4:26:51',
+                    'views' => '42,200,000'
+                ],
+                [
+                    'videoId' => 'eIrMbAQSU34',
+                    'title' => 'Java Tutorial for Beginners',
+                    'channelTitle' => 'Programming with Mosh',
+                    'description' => 'Java tutorial for beginners - Learn Java, the language behind millions of apps and websites.',
+                    'publishedAt' => '2019-07-16T14:30:00Z',
+                    'thumbnail' => 'https://img.youtube.com/vi/eIrMbAQSU34/mqdefault.jpg',
+                    'duration' => '2:30:00',
+                    'views' => '15,500,000'
+                ]
+            ],
+            'query' => $query,
+        ]);
     }
 }
