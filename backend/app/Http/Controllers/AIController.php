@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AiConversation;
+use App\Models\AiMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -10,12 +12,13 @@ use Illuminate\Support\Facades\Log;
 class AIController extends Controller
 {
     /**
-     * Handle AI chat queries from students
+     * Handle AI chat queries from students (with history persistence)
      */
     public function chat(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'query' => 'required|string|min:2|max:5000',
+            'ai_conversation_id' => 'nullable|integer|exists:ai_conversations,id',
             'context' => 'nullable|string|max:5000',
             'files' => 'nullable|array',
             'files.*' => 'nullable|string', // Base64 or URL
@@ -42,8 +45,60 @@ class AIController extends Controller
             $query = $request->input('query');
             $context = $request->input('context');
             $files = $request->input('files', []);
+            $conversationId = $request->input('ai_conversation_id');
 
-            $response = $this->getGeminiResponse($query, $context, $files);
+            // 1. Resolve or create conversation thread
+            if (!$conversationId) {
+                $title = mb_substr($query, 0, 40);
+                if (mb_strlen($query) > 40) {
+                    $title .= '...';
+                }
+                $conversation = AiConversation::create([
+                    'user_id' => $user->id,
+                    'title' => $title ?: 'New AI Chat'
+                ]);
+                $conversationId = $conversation->id;
+            } else {
+                $conversation = AiConversation::where('user_id', $user->id)->findOrFail($conversationId);
+            }
+
+            // 2. Save user message to database
+            $userMessage = AiMessage::create([
+                'ai_conversation_id' => $conversationId,
+                'sender' => 'user',
+                'content' => $query
+            ]);
+
+            // 3. Build history context for Gemini (last 10 messages)
+            $pastMessages = AiMessage::where('ai_conversation_id', $conversationId)
+                ->where('id', '!=', $userMessage->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->reverse();
+
+            $historyContext = "";
+            foreach ($pastMessages as $msg) {
+                if ($msg->sender === 'user') {
+                    $historyContext .= "Student: " . $msg->content . "\n";
+                } else {
+                    $historyContext .= "AI Assistant: " . $msg->content . "\n";
+                }
+            }
+
+            if ($context) {
+                $historyContext = $context . "\n\nPast conversation:\n" . $historyContext;
+            }
+
+            // 4. Request response from Gemini API
+            $response = $this->getGeminiResponse($query, $historyContext, $files);
+
+            // 5. Save AI message to database
+            AiMessage::create([
+                'ai_conversation_id' => $conversationId,
+                'sender' => 'ai',
+                'content' => $response
+            ]);
 
             // Log the interaction for analytics
             Log::info('AI Assistant Query', [
@@ -57,6 +112,7 @@ class AIController extends Controller
                 'success' => true,
                 'response' => $response,
                 'user_query' => $query,
+                'ai_conversation_id' => $conversationId,
                 'timestamp' => now()->toIso8601String()
             ]);
         } catch (\Exception $e) {
@@ -68,6 +124,90 @@ class AIController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
+    }
+
+    /**
+     * Get all chat conversations of current user
+     */
+    public function getHistory(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'student') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        $history = AiConversation::where('user_id', $user->id)
+            ->latest()
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $history
+        ]);
+    }
+
+    /**
+     * Get all messages in a conversation
+     */
+    public function getConversationMessages(Request $request, $id)
+    {
+        $user = $request->user();
+        if ($user->role !== 'student') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        $conversation = AiConversation::where('user_id', $user->id)->findOrFail($id);
+        $messages = $conversation->messages()->oldest()->get();
+        
+        return response()->json([
+            'success' => true,
+            'conversation' => $conversation,
+            'messages' => $messages
+        ]);
+    }
+
+    /**
+     * Start a new chat conversation session
+     */
+    public function startConversation(Request $request)
+    {
+        $user = $request->user();
+        if ($user->role !== 'student') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        $request->validate([
+            'title' => 'required|string|max:255'
+        ]);
+        
+        $conversation = AiConversation::create([
+            'user_id' => $user->id,
+            'title' => $request->title
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'conversation' => $conversation
+        ], 201);
+    }
+
+    /**
+     * Delete a conversation thread
+     */
+    public function destroyConversation(Request $request, $id)
+    {
+        $user = $request->user();
+        if ($user->role !== 'student') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        
+        $conversation = AiConversation::where('user_id', $user->id)->findOrFail($id);
+        $conversation->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Chat conversation deleted successfully.'
+        ]);
     }
 
     /**

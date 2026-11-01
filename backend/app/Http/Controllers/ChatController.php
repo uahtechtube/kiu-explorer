@@ -64,14 +64,18 @@ class ChatController extends Controller
             return response()->json(['message' => 'Cannot start chat with self.'], 400);
         }
 
-        // Verify friendship before allowing private chat
+        $recipient = User::findOrFail($recipientId);
+
+        // Verify friendship or staff status before allowing private chat
         $areFriends = DB::table('friendships')
             ->where('user_id', $user->id)
             ->where('friend_id', $recipientId)
             ->exists();
 
-        if (!$areFriends) {
-            return response()->json(['message' => 'You must be friends to start a conversation.'], 403);
+        $isStaff = in_array($recipient->role, ['lecturer', 'admin']);
+
+        if (!$areFriends && !$isStaff) {
+            return response()->json(['message' => 'You must be friends with this student to start a conversation.'], 403);
         }
 
         // Check if private conversation already exists between these two
@@ -94,6 +98,63 @@ class ChatController extends Controller
         }
 
         return response()->json($conversation->load('users'));
+    }
+
+    /**
+     * Look up a user by user_id or matric_number to start a chat.
+     */
+    public function lookupUser(Request $request)
+    {
+        $request->validate(['id_no' => 'required|string']);
+        $idNo = trim($request->id_no);
+        $currentUser = $request->user();
+
+        $targetUser = User::where(function($query) use ($idNo) {
+            $query->where('user_id', $idNo)
+                  ->orWhere('matric_number', $idNo);
+        })->first();
+
+        if (!$targetUser) {
+            return response()->json(['message' => 'User with this ID number not found.'], 404);
+        }
+
+        if ($targetUser->id === $currentUser->id) {
+            return response()->json(['message' => 'You cannot chat with yourself.'], 400);
+        }
+
+        // Check relationship status
+        $areFriends = DB::table('friendships')
+            ->where('user_id', $currentUser->id)
+            ->where('friend_id', $targetUser->id)
+            ->exists();
+
+        $isStaff = in_array($targetUser->role, ['lecturer', 'admin']);
+
+        // Eager load relationships if profile exists
+        $departmentName = 'General';
+        if ($targetUser->role === 'student' && $targetUser->studentProfile) {
+            $departmentName = $targetUser->studentProfile->department->name ?? 'General';
+        } else if ($targetUser->role === 'lecturer') {
+            $departmentName = $targetUser->lecturerProfile->department->name ?? 'General';
+        }
+
+        // Return user info and relationship details
+        return response()->json([
+            'user' => [
+                'id' => $targetUser->id,
+                'user_id' => $targetUser->user_id,
+                'matric_number' => $targetUser->matric_number,
+                'name' => $targetUser->name,
+                'surname' => $targetUser->surname,
+                'first_name' => $targetUser->first_name,
+                'role' => $targetUser->role,
+                'passport_photograph' => $targetUser->passport_photograph,
+                'department' => $departmentName,
+            ],
+            'are_friends' => $areFriends,
+            'is_staff' => $isStaff,
+            'can_chat' => $areFriends || $isStaff
+        ]);
     }
 
     /**

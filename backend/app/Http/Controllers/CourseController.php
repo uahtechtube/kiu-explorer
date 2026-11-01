@@ -86,6 +86,10 @@ class CourseController extends Controller
     public function enroll(Request $request)
     {
         // Registration is now disabled/global
+<<<<<<< HEAD
+        return response()->json([
+            'message' => 'Course access is now global. No registration needed.',
+=======
         return response()->json([
             'message' => 'Course access is now global. No registration needed.',
         ]);
@@ -99,4 +103,57 @@ class CourseController extends Controller
         $courses = Course::with('department.faculty')->get();
         return response()->json($courses);
     }
+
+    /**
+     * Update an existing course (Admin/Lecturer).
+     */
+    public function update(Request $request, $id)
+    {
+        $course = Course::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'department_id' => 'sometimes|required|exists:departments,id',
+            'code' => 'sometimes|required|string|unique:courses,code,' . $id,
+            'title' => 'sometimes|required|string',
+            'unit' => 'sometimes|required|integer|min:1',
+            'level' => 'sometimes|required|string',
+            'semester' => 'sometimes|required|string',
+            'is_elective' => 'boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $course->update($request->all());
+
+        return response()->json([
+            'message' => 'Course updated successfully',
+            'course' => $course
+>>>>>>> 0f16eb8ecbd742337de3889bfb884d0b3b40e001
+        ]);
+    }
+
+    /**
+<<<<<<< HEAD
+     * Get student's registered courses (Now returns all courses)
+=======
+     * Delete an existing course (Admin/Lecturer).
+>>>>>>> 0f16eb8ecbd742337de3889bfb884d0b3b40e001
+     */
+    public function destroy($id)
+    {
+<<<<<<< HEAD
+        $courses = Course::with('department.faculty')->get();
+        return response()->json($courses);
+=======
+        $course = Course::findOrFail($id);
+        $course->delete();
+
+        return response()->json([
+            'message' => 'Course deleted successfully'
+        ]);
+>>>>>>> 0f16eb8ecbd742337de3889bfb884d0b3b40e001
+    }
 }
+

@@ -25,7 +25,9 @@ return new class extends Migration
         });
         
         // Update type values via raw SQL to support new types
-        DB::statement("ALTER TABLE messages MODIFY COLUMN type ENUM('text', 'image', 'document', 'voice', 'video', 'file') DEFAULT 'text'");
+        if (\DB::getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE messages MODIFY COLUMN type ENUM('text', 'image', 'document', 'voice', 'video', 'file') DEFAULT 'text'");
+        }
     }
 
     /**
@@ -45,6 +47,8 @@ return new class extends Migration
         });
         
         // Revert type column
-        DB::statement("ALTER TABLE messages MODIFY COLUMN type ENUM('text', 'image', 'file') DEFAULT 'text'");
+        if (\DB::getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE messages MODIFY COLUMN type ENUM('text', 'image', 'file') DEFAULT 'text'");
+        }
     }
 };

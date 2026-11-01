@@ -48,21 +48,9 @@ class ModerationController extends Controller
      */
     public function getPendingContent()
     {
-        $pendingTutorials = Tutorial::where('status', 'pending')
-            ->with('lecturer:id,surname,first_name')
-            ->get()
-            ->map(function ($tutorial) {
-                return [
-                    'id' => $tutorial->id,
-                    'type' => 'tutorial',
-                    'title' => $tutorial->title,
-                    'description' => $tutorial->description,
-                    'uploaded_by' => $tutorial->lecturer->surname . ' ' . $tutorial->lecturer->first_name,
-                    'created_at' => $tutorial->created_at,
-                ];
-            });
+        $pendingTutorials = collect(); // Tutorials are auto-active, no pending state
 
-        $pendingLibrary = LibraryResource::where('status', 'pending')
+        $pendingLibrary = LibraryResource::where('is_approved', false)
             ->with('uploader:id,surname,first_name')
             ->get()
             ->map(function ($resource) {
@@ -71,24 +59,12 @@ class ModerationController extends Controller
                     'type' => 'library',
                     'title' => $resource->title,
                     'description' => $resource->description,
-                    'uploaded_by' => $resource->uploader->surname . ' ' . $resource->uploader->first_name,
+                    'uploaded_by' => $resource->uploader ? ($resource->uploader->surname . ' ' . $resource->uploader->first_name) : 'System',
                     'created_at' => $resource->created_at,
                 ];
             });
 
-        $pendingPosts = Post::where('status', 'pending')
-            ->with('user:id,surname,first_name')
-            ->get()
-            ->map(function ($post) {
-                return [
-                    'id' => $post->id,
-                    'type' => 'post',
-                    'title' => 'Social Post',
-                    'description' => $post->content,
-                    'uploaded_by' => $post->user->surname . ' ' . $post->user->first_name,
-                    'created_at' => $post->created_at,
-                ];
-            });
+        $pendingPosts = collect(); // Posts are auto-active, no pending state
 
         $allPending = collect()
             ->merge($pendingTutorials)
@@ -120,7 +96,16 @@ class ModerationController extends Controller
         $model = $this->getModelByType($request->type);
         $content = $model::findOrFail($id);
         
-        $content->update(['status' => 'approved']);
+        if ($request->type === 'library') {
+            $content->update([
+                'is_approved' => true,
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
+            ]);
+        } elseif ($request->type === 'tutorial') {
+            $content->update(['status' => 'active']);
+        }
+        // Posts do not have status column
 
         return response()->json([
             'message' => ucfirst($request->type) . ' approved successfully',
@@ -141,14 +126,17 @@ class ModerationController extends Controller
         $model = $this->getModelByType($request->type);
         $content = $model::findOrFail($id);
         
-        $content->update([
-            'status' => 'rejected',
-            'rejection_reason' => $request->reason
-        ]);
+        if ($request->type === 'library') {
+            $content->delete();
+        } elseif ($request->type === 'tutorial') {
+            $content->update(['status' => 'banned']);
+        } else {
+            $content->delete();
+        }
 
         return response()->json([
             'message' => ucfirst($request->type) . ' rejected',
-            'content' => $content
+            'content' => null
         ]);
     }
 
@@ -228,9 +216,9 @@ class ModerationController extends Controller
                 'total' => Report::count(),
             ],
             'pending_content' => [
-                'tutorials' => Tutorial::where('status', 'pending')->count(),
-                'library' => LibraryResource::where('status', 'pending')->count(),
-                'posts' => Post::where('status', 'pending')->count(),
+                'tutorials' => 0,
+                'library' => LibraryResource::where('is_approved', false)->count(),
+                'posts' => 0,
             ],
             'recent_reports' => Report::with(['reporter:id,surname,first_name'])
                 ->latest()
@@ -266,8 +254,19 @@ class ModerationController extends Controller
 
         $model = $this->getModelByType($request->type);
         
-        $updated = $model::whereIn('id', $request->ids)
-            ->update(['status' => 'approved']);
+        if ($request->type === 'library') {
+            $updated = $model::whereIn('id', $request->ids)
+                ->update([
+                    'is_approved' => true,
+                    'approved_by' => $request->user()->id,
+                    'approved_at' => now(),
+                ]);
+        } elseif ($request->type === 'tutorial') {
+            $updated = $model::whereIn('id', $request->ids)
+                ->update(['status' => 'active']);
+        } else {
+            $updated = count($request->ids);
+        }
 
         return response()->json([
             'message' => "{$updated} items approved successfully",
@@ -289,11 +288,14 @@ class ModerationController extends Controller
 
         $model = $this->getModelByType($request->type);
         
-        $updated = $model::whereIn('id', $request->ids)
-            ->update([
-                'status' => 'rejected',
-                'rejection_reason' => $request->reason ?? 'Bulk rejection'
-            ]);
+        if ($request->type === 'library') {
+            $updated = $model::whereIn('id', $request->ids)->delete();
+        } elseif ($request->type === 'tutorial') {
+            $updated = $model::whereIn('id', $request->ids)
+                ->update(['status' => 'banned']);
+        } else {
+            $updated = $model::whereIn('id', $request->ids)->delete();
+        }
 
         return response()->json([
             'message' => "{$updated} items rejected",

@@ -221,7 +221,7 @@ class MasterSeeder extends Seeder
         AcademicCalendar::create([
             'title' => 'First Semester Examination Period',
             'description' => 'End of semester examinations for all students.',
-            'type' => 'Exam',
+            'type' => 'exam',
             'start_date' => Carbon::now()->addMonths(2),
             'end_date' => Carbon::now()->addMonths(2)->addWeeks(3),
             'academic_session' => '2025/2026',
@@ -233,7 +233,7 @@ class MasterSeeder extends Seeder
         AcademicCalendar::create([
             'title' => 'Matriculation Ceremony',
             'description' => 'Official induction ceremony for new students.',
-            'type' => 'Academic',
+            'type' => 'event',
             'start_date' => Carbon::now()->addWeeks(2),
             'end_date' => Carbon::now()->addWeeks(2),
             'academic_session' => '2025/2026',
@@ -253,6 +253,10 @@ class MasterSeeder extends Seeder
             'email' => 'dean.science@kiu.edu.ng',
             'is_active' => true,
         ]);
+
+        // 13. Lost Items
+        $this->call(LostItemSeeder::class);
+        $this->command->info('Lost & Found Seeded.');
 
         $this->command->info('Master Seeding Finished Successfully!');
     }

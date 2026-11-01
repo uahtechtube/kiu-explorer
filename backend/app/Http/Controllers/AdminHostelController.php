@@ -152,6 +152,20 @@ class AdminHostelController extends Controller
             'approved_at' => now(),
         ]);
 
+        // Auto-create pending payment
+        $payment = \App\Models\Payment::create([
+            'student_id' => $booking->student_id,
+            'amount' => $room->price_per_semester + (float) cache()->get('settings.hostel_service_fee', 5000.00),
+            'type' => 'hostel',
+            'description' => 'Hostel Accommodation Fee - Room ' . $room->room_number . ' at ' . $room->hostel->name,
+            'reference' => 'TXN-' . strtoupper(\Illuminate\Support\Str::random(10)),
+            'status' => 'pending',
+        ]);
+
+        $booking->update([
+            'payment_id' => $payment->id,
+        ]);
+
         // Assign the bed
         $bed->update([
             'is_occupied' => true,
@@ -177,6 +191,41 @@ class AdminHostelController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'Booking rejected.',
+        ]);
+    }
+
+    public function evictStudent($id)
+    {
+        $booking = HostelBooking::findOrFail($id);
+
+        if ($booking->status !== 'approved') {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Student is not currently checked-in/approved for this booking.',
+            ], 400);
+        }
+
+        $room = $booking->room;
+        // Find student's bed and release it
+        $bed = $room->beds()->where('student_id', $booking->student_id)->first();
+
+        if ($bed) {
+            $bed->update([
+                'is_occupied' => false,
+                'student_id'  => null,
+            ]);
+        }
+
+        $booking->update(['status' => 'cancelled']);
+
+        $room->increment('available_slots');
+        if ($room->status === 'full') {
+            $room->update(['status' => 'available']);
+        }
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Student has been successfully evicted and room slot released.',
         ]);
     }
 

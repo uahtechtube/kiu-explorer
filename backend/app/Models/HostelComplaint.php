@@ -13,6 +13,7 @@ class HostelComplaint extends Model
         'student_id',
         'hostel_id',
         'hostel_room_id',
+        'room_number',
         'category',
         'title',
         'description',

@@ -23,21 +23,46 @@ class AdminController extends Controller
      */
     public function stats()
     {
+        $totalUsers = User::count();
+        $activeStudents = User::where('role', 'student')->where('account_status', 'active')->count();
+        $totalLecturers = User::where('role', 'lecturer')->count();
+        $totalCourses = Course::count();
+        
+        $pendingReports = 0;
+        if (class_exists(\App\Models\SystemAlert::class)) {
+            try {
+                $pendingReports = \App\Models\SystemAlert::where('is_resolved', false)->count();
+            } catch (\Exception $e) {}
+        }
+        
+        $uptime = $this->calculateUptime();
+        $dbHealth = $this->checkDatabaseHealth();
+        $systemHealth = $dbHealth ? 98 : 50;
+
         return response()->json([
             'users' => [
-                'total' => User::count(),
+                'total' => $totalUsers,
                 'students' => User::where('role', 'student')->count(),
-                'lecturers' => User::where('role', 'lecturer')->count(),
+                'lecturers' => $totalLecturers,
                 'admins' => User::where('role', 'admin')->count(),
                 'blocked' => User::where('account_status', 'blocked')->count(),
             ],
             'academic' => [
-                'courses' => Course::count(),
+                'courses' => $totalCourses,
                 'exams' => Exam::count(),
             ],
             'social' => [
                 'associations' => Association::count(),
                 'active_classes' => VirtualClass::where('status', 'scheduled')->count(),
+            ],
+            'stats' => [
+                'total_users' => $totalUsers,
+                'active_students' => $activeStudents ?: User::where('role', 'student')->count(),
+                'total_lecturers' => $totalLecturers,
+                'total_courses' => $totalCourses,
+                'pending_reports' => $pendingReports,
+                'system_health' => $systemHealth,
+                'server_uptime' => $uptime,
             ]
         ]);
     }
@@ -286,15 +311,175 @@ class AdminController extends Controller
             'total_logins_today' => User::where('updated_at', '>=', $today)->count(),
         ];
 
+<<<<<<< HEAD
+=======
+        // Course enrollment rankings (top 5)
+        $courseEnrollment = Course::withCount('registrations')
+            ->orderBy('registrations_count', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'course' => $course->code . ': ' . $course->title,
+                    'students' => $course->registrations_count
+                ];
+            });
+
+>>>>>>> 0f16eb8ecbd742337de3889bfb884d0b3b40e001
         return response()->json([
             'user_growth' => $userGrowth,
             'engagement_metrics' => $engagementMetrics,
+            'course_enrollment' => $courseEnrollment,
             'summary' => [
                 'total_users' => User::count(),
                 'total_courses' => Course::count(),
                 'total_exams' => Exam::count(),
                 'active_classes' => VirtualClass::where('status', 'live')->count(),
             ]
+        ]);
+    }
+
+    /**
+     * Get system global settings configuration
+     */
+    public function getSystemSettings(Request $request)
+    {
+        return response()->json([
+            'maintenance_mode' => (bool) cache()->get('settings.maintenance_mode', false),
+            'email_outreach' => (bool) cache()->get('settings.email_outreach', true),
+            'two_factor' => (bool) cache()->get('settings.two_factor', true),
+            'hostel_service_fee' => (float) cache()->get('settings.hostel_service_fee', 5000.00),
+            'academic_sessions' => \App\Models\AcademicSession::orderBy('name', 'desc')->get(),
+            'current_session_id' => \App\Models\AcademicSession::where('is_current', true)->value('id') ?? (\App\Models\AcademicSession::value('id') ?? 0),
+        ]);
+    }
+
+    /**
+     * Update a single system configuration toggle
+     */
+    public function updateSystemToggle(Request $request)
+    {
+        $request->validate([
+            'key' => 'required|string|in:maintenance_mode,email_outreach,two_factor,hostel_service_fee',
+            'enabled' => 'sometimes|boolean',
+            'value' => 'sometimes|numeric|min:0',
+        ]);
+
+        $key = $request->key;
+        $oldVal = cache()->get('settings.' . $key, null);
+
+        if ($key === 'hostel_service_fee') {
+            $newVal = (float) $request->value;
+            cache()->forever('settings.' . $key, $newVal);
+        } else {
+            $newVal = (bool) $request->enabled;
+            cache()->forever('settings.' . $key, $newVal);
+        }
+
+        try {
+            \App\Models\AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'Update System Setting',
+                'model_type' => 'SystemSettings',
+                'model_id' => 0,
+                'old_values' => [$key => $oldVal],
+                'new_values' => [$key => $newVal],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+        } catch (\Exception $e) {}
+
+        return response()->json([
+            'message' => 'System configuration successfully updated.',
+            'key' => $key,
+            'enabled' => $key === 'hostel_service_fee' ? true : $newVal,
+            'value' => $key === 'hostel_service_fee' ? $newVal : null,
+        ]);
+    }
+
+    /**
+     * Set the current active academic session
+     */
+    public function setActiveSession(Request $request)
+    {
+        $request->validate([
+            'session_id' => 'required|integer|exists:academic_sessions,id',
+        ]);
+
+        $oldSessionId = \App\Models\AcademicSession::where('is_current', true)->value('id');
+
+        \DB::transaction(function () use ($request) {
+            \App\Models\AcademicSession::where('is_current', true)->update(['is_current' => false]);
+            \App\Models\AcademicSession::where('id', $request->session_id)->update(['is_current' => true]);
+        });
+
+        $sessionName = \App\Models\AcademicSession::where('id', $request->session_id)->value('name');
+
+        try {
+            \App\Models\AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'Change Active Academic Session',
+                'model_type' => 'AcademicSession',
+                'model_id' => $request->session_id,
+                'old_values' => ['current_session_id' => $oldSessionId],
+                'new_values' => ['current_session_id' => $request->session_id],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+        } catch (\Exception $e) {}
+
+        return response()->json([
+            'message' => "Academic session successfully activated: {$sessionName}",
+            'session_id' => $request->session_id,
+        ]);
+    }
+
+    /**
+     * Restore system parameters to default configuration
+     */
+    public function resetSystemSettings(Request $request)
+    {
+        $oldSettings = [
+            'maintenance_mode' => cache()->get('settings.maintenance_mode', false),
+            'email_outreach' => cache()->get('settings.email_outreach', true),
+            'two_factor' => cache()->get('settings.two_factor', true),
+        ];
+
+        cache()->forever('settings.maintenance_mode', false);
+        cache()->forever('settings.email_outreach', true);
+        cache()->forever('settings.two_factor', true);
+
+        $firstSession = \App\Models\AcademicSession::first();
+        if ($firstSession) {
+            \DB::transaction(function () use ($firstSession) {
+                \App\Models\AcademicSession::where('is_current', true)->update(['is_current' => false]);
+                $firstSession->update(['is_current' => true]);
+            });
+        }
+
+        try {
+            \App\Models\AuditLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'Restore Default Settings',
+                'model_type' => 'SystemSettings',
+                'model_id' => 0,
+                'old_values' => $oldSettings,
+                'new_values' => [
+                    'maintenance_mode' => false,
+                    'email_outreach' => true,
+                    'two_factor' => true,
+                ],
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+        } catch (\Exception $e) {}
+
+        return response()->json([
+            'message' => 'All configuration overrides restored to system defaults.',
+            'maintenance_mode' => false,
+            'email_outreach' => true,
+            'two_factor' => true,
+            'current_session_id' => $firstSession ? $firstSession->id : 0
         ]);
     }
 
@@ -343,8 +528,15 @@ class AdminController extends Controller
             'first_name' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|min:6',
-            'role' => 'required|in:student,lecturer,admin',
+            'role' => 'required|in:student,lecturer,tutor,admin,management,security,dean,hod',
         ]);
+
+        $currentUser = $request->user();
+        if (in_array($request->role, ['security', 'dean', 'management', 'admin'])) {
+            if (!$currentUser || !in_array($currentUser->role, ['admin', 'management'])) {
+                return response()->json(['error' => 'Only Super Admins (Admin/Management) can create security, dean, admin, or management accounts.'], 403);
+            }
+        }
 
         $user = User::create([
             'surname' => $request->surname,
@@ -353,14 +545,22 @@ class AdminController extends Controller
             'password' => bcrypt($request->password),
             'role' => $request->role,
             'account_status' => 'active',
+            'faculty_id' => $request->faculty_id,
+            'department_id' => $request->department_id,
         ]);
 
         if ($request->role === 'student') {
-            // Give them a mock matric number or let it be null initially
             $user->update(['matric_number' => 'KIU/'.date('Y').'/STU/'.rand(1000, 9999)]);
-        } elseif ($request->role === 'lecturer') {
+            $user->studentProfile()->create([
+                'faculty_id' => $request->faculty_id,
+                'department_id' => $request->department_id,
+                'programme_id' => $request->programme_id,
+                'academic_session_id' => $request->academic_session_id ?? 1,
+                'level' => $request->level ?? '100',
+            ]);
+        } elseif ($request->role === 'lecturer' || $request->role === 'tutor') {
             $user->lecturerProfile()->create([
-                'department_id' => $request->department_id ?? 1, // Fallback
+                'department_id' => $request->department_id ?? 1,
             ]);
         }
 

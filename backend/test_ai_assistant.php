@@ -7,63 +7,55 @@ $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use Illuminate\Support\Facades\Http;
 
-echo "=== AI Assistant Configuration Check ===\n\n";
+echo "=== Gemini AI Assistant Configuration Check ===\n\n";
 
-// Check environment variables
-$apiKey = env('OPENROUTER_API_KEY');
-$model = env('OPENROUTER_MODEL', 'google/gemma-3n-e2b-it:free');
-$appUrl = env('APP_URL', 'http://localhost');
+// Check environment variables through services config
+$apiKey = config('services.gemini.key');
+$version = config('services.gemini.version', 'v1');
+$model = config('services.gemini.model', 'gemini-1.5-flash');
 
 echo "1. Configuration Status:\n";
 echo "   API Key: " . ($apiKey ? "✅ Set (length: " . strlen($apiKey) . ")" : "❌ Missing") . "\n";
-echo "   Model: $model\n";
-echo "   App URL: $appUrl\n\n";
+echo "   API Version: $version\n";
+echo "   Model: $model\n\n";
 
 if (!$apiKey) {
-    echo "❌ ERROR: OPENROUTER_API_KEY is not set in .env file\n";
+    echo "❌ ERROR: GEMINI_API_KEY is not set in .env file\n";
     echo "\nTo fix this:\n";
-    echo "1. Get an API key from https://openrouter.ai/\n";
-    echo "2. Add to .env: OPENROUTER_API_KEY=your_key_here\n";
-    echo "3. Optionally set model: OPENROUTER_MODEL=google/gemma-3n-e2b-it:free\n";
+    echo "1. Add to .env: GEMINI_API_KEY=your_key_here\n";
+    echo "2. Optionally set model: GEMINI_MODEL=gemini-2.5-flash\n";
+    echo "3. Optionally set version: GEMINI_API_VERSION=v1beta\n";
     exit(1);
 }
 
-echo "2. Testing API Connection...\n";
+echo "2. Testing Gemini API Connection...\n";
 
 try {
+    $apiUrl = "https://generativelanguage.googleapis.com/{$version}/models/{$model}:generateContent?key={$apiKey}";
+    
     $response = Http::timeout(30)
-        ->withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
-            'HTTP-Referer' => $appUrl,
-            'X-Title' => 'KIU Explorer AI Assistant Test',
-        ])
-        ->post('https://openrouter.ai/api/v1/chat/completions', [
-            'model' => $model,
-            'messages' => [
+        ->post($apiUrl, [
+            'contents' => [
                 [
-                    'role' => 'system',
-                    'content' => 'You are a helpful AI assistant.'
-                ],
-                [
-                    'role' => 'user',
-                    'content' => 'Say "Hello from KIU Explorer!" in one sentence.'
+                    'parts' => [
+                        ['text' => 'Say "Hello from KIU Explorer!" in one sentence.']
+                    ]
                 ]
             ],
+            'generationConfig' => [
+                'temperature' => 0.7,
+                'maxOutputTokens' => 100,
+            ]
         ]);
 
     if ($response->successful()) {
         $data = $response->json();
-        $aiResponse = $data['choices'][0]['message']['content'] ?? '';
+        $aiResponse = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
         
         echo "   ✅ API Connection Successful!\n";
-        echo "   Response: $aiResponse\n\n";
+        echo "   Response: " . trim($aiResponse) . "\n\n";
         
-        echo "3. API Details:\n";
-        echo "   Model Used: " . ($data['model'] ?? 'N/A') . "\n";
-        echo "   Tokens Used: " . ($data['usage']['total_tokens'] ?? 'N/A') . "\n\n";
-        
-        echo "✅ AI Assistant is fully configured and working!\n";
-        echo "\nYou can now use the AI Assistant in the app.\n";
+        echo "✅ Gemini AI Assistant is fully configured and working!\n";
         
     } else {
         $status = $response->status();
@@ -75,10 +67,10 @@ try {
         
         if ($status === 429) {
             echo "⚠️  Quota exceeded - You've reached the API usage limit.\n";
-            echo "   Check your OpenRouter dashboard for usage details.\n";
-        } elseif ($status === 401) {
-            echo "❌ Authentication failed - Invalid API key.\n";
-            echo "   Please check your OPENROUTER_API_KEY in .env\n";
+        } elseif ($status === 400) {
+            echo "❌ Authentication failed or Invalid Request - Please check your GEMINI_API_KEY in .env\n";
+        } elseif ($status === 404) {
+            echo "❌ Model or version not found - Please check GEMINI_MODEL and GEMINI_API_VERSION in .env\n";
         } else {
             echo "❌ Unknown error occurred.\n";
         }
@@ -89,7 +81,7 @@ try {
     echo "Possible issues:\n";
     echo "- No internet connection\n";
     echo "- Firewall blocking the request\n";
-    echo "- OpenRouter API is down\n";
+    echo "- Gemini API is down\n";
 }
 
 echo "\n=== Test Complete ===\n";

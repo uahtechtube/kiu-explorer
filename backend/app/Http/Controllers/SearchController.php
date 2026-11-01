@@ -1,4 +1,4 @@
-&lt;?php
+<?php
 
 namespace App\Http\Controllers;
 
@@ -17,12 +17,12 @@ class SearchController extends Controller
      */
     public function search(Request $request)
     {
-        $query = $request-&gt;input('q', '');
+        $query = $request->input('q', '');
         
         if (empty($query)) {
-            return response()-&gt;json([
-                'success' =&gt; true,
-                'data' =&gt; []
+            return response()->json([
+                'success' => true,
+                'data' => []
             ]);
         }
 
@@ -30,97 +30,97 @@ class SearchController extends Controller
 
         // Search Courses
         $courses = Course::where('title', 'LIKE', "%{$query}%")
-            -&gt;orWhere('code', 'LIKE', "%{$query}%")
-            -&gt;limit(5)
-            -&gt;get();
+            ->orWhere('code', 'LIKE', "%{$query}%")
+            ->limit(5)
+            ->get();
 
         foreach ($courses as $course) {
             $results[] = [
-                'id' =&gt; $course-&gt;id,
-                'type' =&gt; 'Course',
-                'title' =&gt; $course-&gt;title,
-                'subtitle' =&gt; $course-&gt;code . ' • ' . ($course-&gt;lecturer-&gt;name ?? 'No Lecturer'),
-                'link' =&gt; '/classes'
+                'id' => $course->id,
+                'type' => 'Course',
+                'title' => $course->title,
+                'subtitle' => $course->code . ' • ' . ($course->lecturer->name ?? 'No Lecturer'),
+                'link' => '/classes'
             ];
         }
 
         // Search Events
         $events = Event::where('title', 'LIKE', "%{$query}%")
-            -&gt;orWhere('description', 'LIKE', "%{$query}%")
+            ->orWhere('description', 'LIKE', "%{$query}%")
             ->where('start_time', '>=', now())
-            -&gt;limit(5)
-            -&gt;get();
+            ->limit(5)
+            ->get();
 
         foreach ($events as $event) {
             $results[] = [
-                'id' =&gt; $event-&gt;id,
-                'type' =&gt; 'Event',
-                'title' =&gt; $event-&gt;title,
+                'id' => $event->id,
+                'type' => 'Event',
+                'title' => $event->title,
                 'subtitle' => $event->start_time->format('M d') . ' • ' . $event->venue . ' • ' . $event->start_time->format('g:i A'),
-                'link' =&gt; '/events/' . $event-&gt;id
+                'link' => '/events/' . $event->id
             ];
         }
 
         // Search Associations
         $associations = Association::where('name', 'LIKE', "%{$query}%")
-            -&gt;orWhere('description', 'LIKE', "%{$query}%")
-            -&gt;limit(5)
-            -&gt;get();
+            ->orWhere('description', 'LIKE', "%{$query}%")
+            ->limit(5)
+            ->get();
 
         foreach ($associations as $assoc) {
-            $memberCount = $assoc-&gt;members()-&gt;count();
+            $memberCount = $assoc->members()->count();
             $results[] = [
-                'id' =&gt; $assoc-&gt;id,
-                'type' =&gt; 'Association',
-                'title' =&gt; $assoc-&gt;name,
-                'subtitle' =&gt; $assoc-&gt;description . ' • ' . $memberCount . ' members',
-                'link' =&gt; '/associations/' . $assoc-&gt;id
+                'id' => $assoc->id,
+                'type' => 'Association',
+                'title' => $assoc->name,
+                'subtitle' => $assoc->description . ' • ' . $memberCount . ' members',
+                'link' => '/associations/' . $assoc->id
             ];
         }
 
         // Search Library Materials
-        if (DB::getSchemaBuilder()-&gt;hasTable('library_resources')) {
+        if (DB::getSchemaBuilder()->hasTable('library_resources')) {
             $materials = LibraryResource::where('title', 'LIKE', "%{$query}%")
-                -&gt;orWhere('description', 'LIKE', "%{$query}%")
-                -&gt;where('is_approved', true)
-                -&gt;limit(5)
-                -&gt;get();
+                ->orWhere('description', 'LIKE', "%{$query}%")
+                ->where('is_approved', true)
+                ->limit(5)
+                ->get();
 
             foreach ($materials as $material) {
-                $fileSize = $this-&gt;formatBytes($material-&gt;file_size ?? 0);
+                $fileSize = $this->formatBytes($material->file_size ?? 0);
                 $results[] = [
-                    'id' =&gt; $material-&gt;id,
-                    'type' =&gt; 'Material',
-                    'title' =&gt; $material-&gt;title,
-                    'subtitle' =&gt; strtoupper($material-&gt;file_type ?? 'PDF') . ' • ' . $fileSize . ' • Updated ' . $material-&gt;updated_at-&gt;format('Y'),
-                    'link' =&gt; '/library'
+                    'id' => $material->id,
+                    'type' => 'Material',
+                    'title' => $material->title,
+                    'subtitle' => strtoupper($material->file_type ?? 'PDF') . ' • ' . $fileSize . ' • Updated ' . $material->updated_at->format('Y'),
+                    'link' => '/library'
                 ];
             }
         }
 
         // Search Staff (Lecturers)
         $staff = User::where('role', 'lecturer')
-            -&gt;where(function($q) use ($query) {
-                $q-&gt;where('name', 'LIKE', "%{$query}%")
-                  -&gt;orWhere('email', 'LIKE', "%{$query}%");
+            ->where(function($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                  ->orWhere('email', 'LIKE', "%{$query}%");
             })
-            -&gt;limit(5)
-            -&gt;get();
+            ->limit(5)
+            ->get();
 
         foreach ($staff as $lecturer) {
             $results[] = [
-                'id' =&gt; $lecturer-&gt;id,
-                'type' =&gt; 'Staff',
-                'title' =&gt; $lecturer-&gt;name,
-                'subtitle' =&gt; 'Lecturer • ' . $lecturer-&gt;email,
-                'link' =&gt; '/school/staff'
+                'id' => $lecturer->id,
+                'type' => 'Staff',
+                'title' => $lecturer->name,
+                'subtitle' => 'Lecturer • ' . $lecturer->email,
+                'link' => '/school/staff'
             ];
         }
 
-        return response()-&gt;json([
-            'success' =&gt; true,
-            'data' =&gt; $results,
-            'total' =&gt; count($results)
+        return response()->json([
+            'success' => true,
+            'data' => $results,
+            'total' => count($results)
         ]);
     }
 
@@ -131,7 +131,7 @@ class SearchController extends Controller
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
         
-        for ($i = 0; $bytes &gt; 1024; $i++) {
+        for ($i = 0; $bytes > 1024; $i++) {
             $bytes /= 1024;
         }
 

@@ -19,10 +19,12 @@ class SchoolInfo extends Model
         'mission',
         'core_values',
         'logo_url',
+        'cover_image',
         'motto',
         'established_year',
         'address',
         'phone',
+        'whatsapp_number',
         'email',
         'website',
     ];

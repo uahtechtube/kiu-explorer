@@ -212,9 +212,9 @@ class LecturerController extends Controller
             // Total students across all courses
             $totalStudents = 0;
             if ($courseIds->isNotEmpty()) {
-                $totalStudents = \App\Models\CourseEnrollment::whereIn('course_id', $courseIds)
-                    ->distinct('student_id')
-                    ->count('student_id');
+                $totalStudents = \App\Models\CourseRegistration::whereIn('course_id', $courseIds)
+                    ->distinct('user_id')
+                    ->count('user_id');
             }
 
             // Active classes (upcoming virtual classes)
@@ -253,7 +253,7 @@ class LecturerController extends Controller
                             'title' => $class->title,
                             'time' => $class->scheduled_at->format('M d, Y h:i A'),
                             'room' => 'Virtual',
-                            'students_count' => \App\Models\CourseEnrollment::where('course_id', $class->course_id)->count(),
+                            'students_count' => \App\Models\CourseRegistration::where('course_id', $class->course_id)->count(),
                         ];
                     });
             }
@@ -336,7 +336,7 @@ class LecturerController extends Controller
 
         $courses = $allocations->map(function($allocation) {
             $course = $allocation->course;
-            $enrollmentCount = \App\Models\CourseEnrollment::where('course_id', $course->id)->count();
+            $enrollmentCount = \App\Models\CourseRegistration::where('course_id', $course->id)->count();
             
             return [
                 'id' => $course->id,

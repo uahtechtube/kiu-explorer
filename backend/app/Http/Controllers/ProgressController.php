@@ -18,7 +18,7 @@ class ProgressController extends Controller
     {
         $student = Auth::user();
         
-        if (!$student || !$student->student_profile) {
+        if (!$student || !$student->studentProfile) {
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 

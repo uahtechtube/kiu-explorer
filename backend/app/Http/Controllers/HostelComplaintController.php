@@ -27,26 +27,17 @@ class HostelComplaintController extends Controller
             'category' => 'required|in:plumbing,electrical,carpentry,cleaning,security,other',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
+            'hostel_id' => 'nullable|exists:hostels,id',
+            'room_number' => 'nullable|string|max:50',
         ]);
 
         $user = $request->user();
-        
-        // Find the student's active hostel booking to get hostel and room info
-        $booking = HostelBooking::where('student_id', $user->id)
-            ->where('status', 'approved')
-            ->first();
-
-        if (!$booking) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You must have an approved hostel booking to report a complaint.'
-            ], 403);
-        }
 
         $complaint = HostelComplaint::create([
             'student_id' => $user->id,
-            'hostel_id' => $booking->room->hostel_id,
-            'hostel_room_id' => $booking->hostel_room_id,
+            'hostel_id' => $request->hostel_id,
+            'hostel_room_id' => null,
+            'room_number' => $request->room_number,
             'category' => $request->category,
             'title' => $request->title,
             'description' => $request->description,

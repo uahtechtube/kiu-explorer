@@ -17,11 +17,14 @@ class AssignmentController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Assignment::with(['course', 'lecturer:id,surname,first_name']);
+        $query = Assignment::with(['course', 'lecturer:id,surname,first_name'])->withCount('submissions');
 
         if ($user->isStudent()) {
-            // Students see assignments for their registered courses
-            $courseIds = $user->studentProfile->registrations()->pluck('course_id');
+            // Students see assignments for their registered courses (with a global fallback if no explicit registrations exist)
+            $courseIds = \App\Models\CourseRegistration::where('user_id', $user->id)->pluck('course_id');
+            if ($courseIds->isEmpty()) {
+                $courseIds = \App\Models\Course::pluck('id');
+            }
             $query->whereIn('course_id', $courseIds)->where('is_published', true);
         } elseif ($user->isLecturer()) {
             // Lecturers see their own assignments
@@ -51,6 +54,38 @@ class AssignmentController extends Controller
         }
 
         return response()->json($assignments);
+    }
+
+    /**
+     * Get assignment details
+     */
+    public function show(Request $request, $id)
+    {
+        $user = $request->user();
+        $assignment = Assignment::with(['course', 'lecturer:id,surname,first_name'])->findOrFail($id);
+
+        if ($user->isStudent()) {
+            // Check if student has access to this course
+            $courseIds = \App\Models\CourseRegistration::where('user_id', $user->id)->pluck('course_id');
+            if ($courseIds->isNotEmpty() && !$courseIds->contains($assignment->course_id)) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+            
+            // Get student submission
+            $submission = AssignmentSubmission::where('assignment_id', $id)
+                ->where('student_id', $user->id)
+                ->first();
+            
+            $assignment->status = $submission ? $submission->status : 'pending';
+            $assignment->setRelation('submission', $submission); // Attach as relation
+        } elseif ($user->isLecturer()) {
+            // Verify lecturer owns the assignment
+            if ($assignment->lecturer_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+        }
+
+        return response()->json($assignment);
     }
 
     /**
@@ -195,5 +230,30 @@ class AssignmentController extends Controller
             ->get();
 
         return response()->json($submissions);
+    }
+
+    /**
+     * Get details of a single submission
+     */
+    public function getSubmission(Request $request, $id)
+    {
+        $submission = AssignmentSubmission::with([
+            'student:id,surname,first_name,matric_number',
+            'assignment:id,title,max_score,due_date,lecturer_id'
+        ])->findOrFail($id);
+
+        // Verify user is the lecturer of this assignment OR the student who submitted it
+        $user = $request->user();
+        if ($user->isLecturer()) {
+            if ($submission->assignment->lecturer_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+        } elseif ($user->isStudent()) {
+            if ($submission->student_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+        }
+
+        return response()->json($submission);
     }
 }

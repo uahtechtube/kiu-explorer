@@ -1,0 +1,6 @@
+.gemini/
+.idea/
+*.docx
+~*
+*.zip
+check_storage_raw.html

@@ -27,4 +27,14 @@ class Hostel extends Model
     {
         return $this->hasMany(HostelRoom::class);
     }
+
+    public function rules()
+    {
+        return $this->hasMany(HostelRule::class);
+    }
+
+    public function hostelHead()
+    {
+        return $this->hasOne(HostelHead::class)->where('is_active', true)->latest();
+    }
 }

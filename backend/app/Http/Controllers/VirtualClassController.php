@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\VirtualClass;
 use App\Models\VirtualClassMessage; // Add this line
+use App\Models\VirtualClassMaterial;
 use App\Models\Attendance;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -48,9 +50,9 @@ class VirtualClassController extends Controller
             'course_id' => 'required|exists:courses,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'scheduled_at' => 'required|date|after:now',
+            'scheduled_at' => 'required|date',
             'duration' => 'required|integer|min:1',
-            'meeting_link' => 'nullable|url',
+            'meeting_link' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -62,6 +64,11 @@ class VirtualClassController extends Controller
             return response()->json(['message' => 'Only lecturers or admins can schedule classes.'], 403);
         }
 
+        $meetingLink = $request->meeting_link;
+        if ($meetingLink && !preg_match("~^(?:f|ht)tps?://~i", $meetingLink)) {
+            $meetingLink = "https://" . $meetingLink;
+        }
+
         $virtualClass = VirtualClass::create([
             'course_id' => $request->course_id,
             'lecturer_id' => $user->id,
@@ -69,7 +76,7 @@ class VirtualClassController extends Controller
             'description' => $request->description,
             'scheduled_at' => $request->scheduled_at,
             'duration' => $request->duration,
-            'meeting_link' => $request->meeting_link,
+            'meeting_link' => $meetingLink,
             'status' => 'upcoming',
         ]);
 
@@ -89,26 +96,31 @@ class VirtualClassController extends Controller
     {
         try {
             // Get all students enrolled in this course
-            $enrolledStudents = \App\Models\CourseEnrollment::where('course_id', $virtualClass->course_id)
-                ->pluck('student_id');
+            $enrolledStudents = \App\Models\CourseRegistration::where('course_id', $virtualClass->course_id)
+                ->pluck('user_id');
 
             // Create notifications for each student
             foreach ($enrolledStudents as $studentId) {
-                \App\Models\Notification::create([
-                    'user_id' => $studentId,
-                    'type' => 'virtual_class',
-                    'title' => 'New Virtual Class Scheduled',
-                    'message' => "A new virtual class '{$virtualClass->title}' has been scheduled for " . 
-                                Carbon::parse($virtualClass->scheduled_at)->format('M d, Y \a\t h:i A'),
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'type' => 'App\Notifications\GenericNotification',
+                    'notifiable_type' => 'App\Models\User',
+                    'notifiable_id' => $studentId,
                     'data' => json_encode([
+                        'title' => 'New Virtual Class Scheduled',
+                        'message' => "A new virtual class '{$virtualClass->title}' has been scheduled for " . 
+                                    Carbon::parse($virtualClass->scheduled_at)->format('M d, Y \a\t h:i A'),
+                        'type' => 'academic',
                         'virtual_class_id' => $virtualClass->id,
                         'course_id' => $virtualClass->course_id,
                         'scheduled_at' => $virtualClass->scheduled_at,
                     ]),
-                    'is_read' => false,
+                    'read_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Log error but don't fail the class creation
             \Log::error('Failed to send virtual class notifications: ' . $e->getMessage());
         }
@@ -231,6 +243,99 @@ class VirtualClassController extends Controller
 
         return response()->json($virtualClass);
     }
+
+    /**
+     * List recorded/archived class sessions (students).
+     */
+    public function recordedList(Request $request)
+    {
+        $query = VirtualClass::with(['course', 'lecturer:id,surname,first_name'])
+            ->where(function ($q) {
+                $q->where('is_recorded', true)->orWhereNotNull('recording_url');
+            });
+
+        $filter = $request->get('filter', 'all');
+        if ($filter === 'recent') {
+            $query->orderByDesc('scheduled_at');
+        } elseif ($filter === 'popular') {
+            $query->withCount('attendances')->orderByDesc('attendances_count');
+        } else {
+            $query->orderByDesc('scheduled_at');
+        }
+
+        $recordings = $query->get()->map(function ($class) {
+            return [
+                'id' => $class->id,
+                'title' => $class->title,
+                'course_code' => $class->course->code ?? null,
+                'lecturer_name' => $class->lecturer
+                    ? $class->lecturer->first_name . ' ' . $class->lecturer->surname
+                    : 'N/A',
+                'recorded_at' => optional($class->scheduled_at)->toDateTimeString(),
+                'duration' => $class->duration,
+                'views' => $class->attendances_count ?? $class->attendances()->count(),
+                'thumbnail_url' => null,
+                'recording_url' => $class->recording_url,
+                'materials_count' => VirtualClassMaterial::where('virtual_class_id', $class->id)->count(),
+            ];
+        });
+
+        return response()->json(['data' => $recordings]);
+    }
+
+    /**
+     * Get the list of downloadable materials for a recorded class (students).
+     */
+    public function materials($id)
+    {
+        $class = VirtualClass::with(['course', 'lecturer:id,surname,first_name'])->findOrFail($id);
+
+        $materials = VirtualClassMaterial::where('virtual_class_id', $id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($material) {
+                return [
+                    'id' => $material->id,
+                    'name' => $material->name,
+                    'type' => $material->type,
+                    'size' => $material->file_size,
+                    'uploaded_at' => optional($material->created_at)->toDateTimeString(),
+                    'url' => $material->file_path,
+                    'downloads' => $material->downloads,
+                ];
+            });
+
+        return response()->json([
+            'class' => [
+                'id' => $class->id,
+                'title' => $class->title,
+                'course_code' => $class->course->code ?? null,
+                'lecturer_name' => $class->lecturer
+                    ? $class->lecturer->first_name . ' ' . $class->lecturer->surname
+                    : 'N/A',
+            ],
+            'materials' => $materials,
+        ]);
+    }
+
+    /**
+     * Trigger a material download, incrementing the download count.
+     */
+    public function downloadMaterial($id)
+    {
+        $material = VirtualClassMaterial::findOrFail($id);
+        $material->increment('downloads');
+
+        if (Storage::disk('public')->exists($material->file_path)) {
+            return Storage::disk('public')->download($material->file_path);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Download intent recorded.',
+        ]);
+    }
+
     /**
      * Get chat messages for a virtual class
      */
@@ -265,11 +370,16 @@ class VirtualClassController extends Controller
         $virtualClass = VirtualClass::findOrFail($id);
         $user = $request->user();
 
+        // Check if chat is muted and user is not moderator (lecturer/admin)
+        if ($virtualClass->is_chat_muted && $user->role !== 'lecturer' && $user->role !== 'admin') {
+            return response()->json(['message' => 'The classroom chat has been muted by the moderator.'], 403);
+        }
+
         $message = VirtualClassMessage::create([
             'virtual_class_id' => $id,
             'user_id' => $user->id,
             'message' => $request->message,
-            'is_lecturer' => $user->role === 'lecturer',
+            'is_lecturer' => $user->role === 'lecturer' || $user->role === 'admin',
         ]);
 
         return response()->json(['message' => 'Message sent', 'data' => $message]);
@@ -290,6 +400,26 @@ class VirtualClassController extends Controller
         return response()->json([
             'message' => $attendance->is_hand_raised ? 'Hand raised' : 'Hand lowered',
             'is_hand_raised' => $attendance->is_hand_raised
+        ]);
+    }
+
+    /**
+     * Toggle chat mute status (Lecturers/Admins only)
+     */
+    public function toggleChatMute(Request $request, $id)
+    {
+        $virtualClass = VirtualClass::findOrFail($id);
+        
+        if ($request->user()->role !== 'lecturer' && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $virtualClass->is_chat_muted = !$virtualClass->is_chat_muted;
+        $virtualClass->save();
+
+        return response()->json([
+            'message' => $virtualClass->is_chat_muted ? 'Classroom chat has been muted' : 'Classroom chat has been unmuted',
+            'is_chat_muted' => $virtualClass->is_chat_muted
         ]);
     }
 
